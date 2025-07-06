@@ -1,5 +1,7 @@
+'use client';
+
 import { DashboardNavigation } from '@/components/dashboard/navigation';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button-btp';
 import Link from 'next/link';
 import { 
   DropdownMenu, 

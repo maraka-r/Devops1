@@ -2,54 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Variables CSS pour le thème BTP Daga Maraka */
 :root {
+  /* Couleurs principales BTP */
+  --btp-orange-50: #fff7ed;
+  --btp-orange-100: #ffedd5;
+  --btp-orange-200: #fed7aa;
+  --btp-orange-300: #fdba74;
+  --btp-orange-400: #fb923c;
+  --btp-orange-500: #f97316;
+  --btp-orange-600: #ea580c;
+  --btp-orange-700: #c2410c;
+  --btp-orange-800: #9a3412;
+  --btp-orange-900: #7c2d12;
+
+  /* Couleurs bleues BTP */
+  --btp-blue-50: #eff6ff;
+  --btp-blue-100: #dbeafe;
+  --btp-blue-200: #bfdbfe;
+  --btp-blue-300: #93c5fd;
+  --btp-blue-400: #60a5fa;
+  --btp-blue-500: #3b82f6;
+  --btp-blue-600: #2563eb;
+  --btp-blue-700: #1d4ed8;
+  --btp-blue-800: #1e40af;
+  --btp-blue-900: #1e3a8a;
+
+  /* Couleurs grises BTP */
+  --btp-gray-50: #f9fafb;
+  --btp-gray-100: #f3f4f6;
+  --btp-gray-200: #e5e7eb;
+  --btp-gray-300: #d1d5db;
+  --btp-gray-400: #9ca3af;
+  --btp-gray-500: #6b7280;
+  --btp-gray-600: #4b5563;
+  --btp-gray-700: #374151;
+  --btp-gray-800: #1f2937;
+  --btp-gray-900: #111827;
+
+  /* Variables système shadcn/ui */
   --background: 0 0% 100%;
-  --foreground: 0 0% 3.9%;
+  --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 3.9%;
+  --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 3.9%;
-  --primary: 0 0% 9%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 96.1%;
-  --secondary-foreground: 0 0% 9%;
-  --muted: 0 0% 96.1%;
-  --muted-foreground: 0 0% 45.1%;
-  --accent: 0 0% 96.1%;
-  --accent-foreground: 0 0% 9%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 22 93% 58%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 84% 4.9%;
   --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 89.8%;
-  --input: 0 0% 89.8%;
-  --ring: 0 0% 3.9%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 22 93% 58%;
   --chart-1: 12 76% 61%;
   --chart-2: 173 58% 39%;
   --chart-3: 197 37% 24%;
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
   --radius: 0.5rem;
+
+  /* Police principale */
+  --font-inter: 'Inter', sans-serif;
 }
 
 .dark {
-  --background: 0 0% 3.9%;
-  --foreground: 0 0% 98%;
-  --card: 0 0% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --popover: 0 0% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 0 0% 9%;
-  --secondary: 0 0% 14.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 14.9%;
-  --muted-foreground: 0 0% 63.9%;
-  --accent: 0 0% 14.9%;
-  --accent-foreground: 0 0% 98%;
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 22 93% 58%;
+  --primary-foreground: 222.2 84% 4.9%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 14.9%;
-  --input: 0 0% 14.9%;
-  --ring: 0 0% 83.1%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 22 93% 58%;
   --chart-1: 220 70% 50%;
   --chart-2: 160 60% 45%;
   --chart-3: 30 80% 55%;
@@ -59,9 +100,63 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
+  
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-inter);
+  }
+  
+  /* Classes utilitaires BTP */
+  .btp-gradient {
+    background: linear-gradient(135deg, var(--btp-orange-500), var(--btp-blue-600));
+  }
+  
+  .btp-shadow {
+    box-shadow: 0 10px 25px -5px rgba(234, 88, 12, 0.1), 0 4px 6px -2px rgba(234, 88, 12, 0.05);
+  }
+  
+  .btp-hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .btp-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px -10px rgba(234, 88, 12, 0.15);
+  }
+}
+
+@layer components {
+  /* Animation d'entrée pour les sections */
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
