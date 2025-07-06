@@ -1,0 +1,226 @@
+// Schémas de validation avec Zod
+// Validation des données d'entrée pour les API et formulaires
+
+import { z } from 'zod';
+import { UserRole, MaterielType, LocationStatus } from '@/types';
+
+// ===========================
+// SCHÉMAS DE BASE
+// ===========================
+
+// Validation des IDs
+export const idSchema = z.string().cuid();
+
+// Validation des emails
+export const emailSchema = z.string().email('Email invalide');
+
+// Validation des mots de passe
+export const passwordSchema = z
+  .string()
+  .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
+  .regex(/(?=.*[a-z])/, 'Le mot de passe doit contenir au moins une minuscule')
+  .regex(/(?=.*[A-Z])/, 'Le mot de passe doit contenir au moins une majuscule')
+  .regex(/(?=.*\d)/, 'Le mot de passe doit contenir au moins un chiffre');
+
+// Validation des numéros de téléphone
+export const phoneSchema = z
+  .string()
+  .regex(/^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/, 'Numéro de téléphone invalide')
+  .optional();
+
+// Validation des dates
+export const dateSchema = z
+  .string()
+  .refine((date) => !isNaN(Date.parse(date)), 'Date invalide')
+  .transform((date) => new Date(date));
+
+// Validation des prix
+export const priceSchema = z
+  .number()
+  .positive('Le prix doit être positif')
+  .max(99999, 'Le prix ne peut pas dépasser 99,999€');
+
+// ===========================
+// SCHÉMAS POUR L'AUTHENTIFICATION
+// ===========================
+
+export const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, 'Le mot de passe est requis'),
+});
+
+export const registerSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+  phone: phoneSchema,
+  company: z.string().optional(),
+  address: z.string().optional(),
+});
+
+// ===========================
+// SCHÉMAS POUR LES UTILISATEURS
+// ===========================
+
+export const createUserSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+  role: z.nativeEnum(UserRole).default(UserRole.USER),
+  phone: phoneSchema,
+  company: z.string().optional(),
+  address: z.string().optional(),
+});
+
+export const updateUserSchema = z.object({
+  email: emailSchema.optional(),
+  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères').optional(),
+  role: z.nativeEnum(UserRole).optional(),
+  phone: phoneSchema,
+  company: z.string().optional(),
+  address: z.string().optional(),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Le mot de passe actuel est requis'),
+  newPassword: passwordSchema,
+  confirmPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: 'Les mots de passe ne correspondent pas',
+  path: ['confirmPassword'],
+});
+
+// ===========================
+// SCHÉMAS POUR LES MATÉRIELS
+// ===========================
+
+export const createMaterielSchema = z.object({
+  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+  type: z.nativeEnum(MaterielType),
+  description: z.string().optional(),
+  pricePerDay: priceSchema,
+  available: z.boolean().default(true),
+  specifications: z.record(z.unknown()).optional(),
+  images: z.array(z.string().url()).default([]),
+  manualUrl: z.string().url().optional(),
+});
+
+export const updateMaterielSchema = z.object({
+  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères').optional(),
+  type: z.nativeEnum(MaterielType).optional(),
+  description: z.string().optional(),
+  pricePerDay: priceSchema.optional(),
+  available: z.boolean().optional(),
+  specifications: z.record(z.unknown()).optional(),
+  images: z.array(z.string().url()).optional(),
+  manualUrl: z.string().url().optional(),
+});
+
+// Schémas pour les spécifications techniques
+export const grueSpecificationsSchema = z.object({
+  capaciteMax: z.number().positive('La capacité maximale doit être positive'),
+  hauteurMax: z.number().positive('La hauteur maximale doit être positive'),
+  porteeMax: z.number().positive('La portée maximale doit être positive'),
+  poids: z.number().positive('Le poids doit être positif'),
+});
+
+export const nacelleSpecificationsSchema = z.object({
+  hauteurTravail: z.number().positive('La hauteur de travail doit être positive'),
+  porteeMax: z.number().positive('La portée maximale doit être positive'),
+  capacitePersonnes: z.number().int().positive('La capacité doit être un nombre entier positif'),
+  poids: z.number().positive('Le poids doit être positif'),
+});
+
+export const telescopiqueSpecificationsSchema = z.object({
+  capaciteMax: z.number().positive('La capacité maximale doit être positive'),
+  hauteurMax: z.number().positive('La hauteur maximale doit être positive'),
+  porteeMax: z.number().positive('La portée maximale doit être positive'),
+  poids: z.number().positive('Le poids doit être positif'),
+});
+
+// ===========================
+// SCHÉMAS POUR LES LOCATIONS
+// ===========================
+
+export const createLocationSchema = z.object({
+  materielId: idSchema,
+  startDate: dateSchema,
+  endDate: dateSchema,
+  notes: z.string().optional(),
+}).refine((data) => data.endDate > data.startDate, {
+  message: 'La date de fin doit être après la date de début',
+  path: ['endDate'],
+}).refine((data) => data.startDate >= new Date(), {
+  message: 'La date de début ne peut pas être dans le passé',
+  path: ['startDate'],
+});
+
+export const updateLocationSchema = z.object({
+  startDate: dateSchema.optional(),
+  endDate: dateSchema.optional(),
+  status: z.nativeEnum(LocationStatus).optional(),
+  notes: z.string().optional(),
+}).refine((data) => {
+  if (data.startDate && data.endDate) {
+    return data.endDate > data.startDate;
+  }
+  return true;
+}, {
+  message: 'La date de fin doit être après la date de début',
+  path: ['endDate'],
+});
+
+// ===========================
+// SCHÉMAS POUR LES FILTRES ET PAGINATION
+// ===========================
+
+export const paginationSchema = z.object({
+  page: z.number().int().positive().default(1),
+  limit: z.number().int().positive().max(100).default(10),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
+});
+
+export const materielFiltersSchema = z.object({
+  type: z.nativeEnum(MaterielType).optional(),
+  available: z.boolean().optional(),
+  priceMin: z.number().positive().optional(),
+  priceMax: z.number().positive().optional(),
+  search: z.string().optional(),
+});
+
+export const locationFiltersSchema = z.object({
+  userId: idSchema.optional(),
+  materielId: idSchema.optional(),
+  status: z.nativeEnum(LocationStatus).optional(),
+  startDate: dateSchema.optional(),
+  endDate: dateSchema.optional(),
+});
+
+// ===========================
+// SCHÉMAS POUR LES PARAMÈTRES D'URL
+// ===========================
+
+export const idParamSchema = z.object({
+  id: idSchema,
+});
+
+// ===========================
+// TYPES INFÉRÉS
+// ===========================
+
+export type LoginInput = z.infer<typeof loginSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type CreateUserInput = z.infer<typeof createUserSchema>;
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type CreateMaterielInput = z.infer<typeof createMaterielSchema>;
+export type UpdateMaterielInput = z.infer<typeof updateMaterielSchema>;
+export type CreateLocationInput = z.infer<typeof createLocationSchema>;
+export type UpdateLocationInput = z.infer<typeof updateLocationSchema>;
+export type PaginationInput = z.infer<typeof paginationSchema>;
+export type MaterielFiltersInput = z.infer<typeof materielFiltersSchema>;
+export type LocationFiltersInput = z.infer<typeof locationFiltersSchema>;
+export type GrueSpecificationsInput = z.infer<typeof grueSpecificationsSchema>;
+export type NacelleSpecificationsInput = z.infer<typeof nacelleSpecificationsSchema>;
+export type TelescopiqueSpecificationsInput = z.infer<typeof telescopiqueSpecificationsSchema>;

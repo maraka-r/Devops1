@@ -1,8 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Schéma Prisma pour l'application Daga Maraka
+// Application de location de matériel BTP
+// Gestion des utilisateurs, équipements et locations
 
 generator client {
   provider = "prisma-client-js"
@@ -12,4 +10,112 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ===========================
+// MODÈLES DE DONNÉES PRINCIPAUX
+// ===========================
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String
+  role        UserRole @default(USER)
+  
+  // Informations profil
+  phone       String?
+  company     String?
+  address     String?
+  
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  locations   Location[]
+  
+  @@map("users")
+}
+
+model Materiel {
+  id            String         @id @default(cuid())
+  name          String
+  type          MaterielType
+  description   String?
+  pricePerDay   Decimal        @db.Decimal(10, 2)
+  available     Boolean        @default(true)
+  
+  // Spécifications techniques (JSON)
+  specifications Json?
+  
+  // Images et documentation
+  images        String[]       @default([])
+  manualUrl     String?
+  
+  // Metadata
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // Relations
+  locations     Location[]
+  
+  @@map("materiels")
+}
+
+model Location {
+  id          String        @id @default(cuid())
+  
+  // Relations
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  materielId  String
+  materiel    Materiel      @relation(fields: [materielId], references: [id], onDelete: Cascade)
+  
+  // Dates de location
+  startDate   DateTime
+  endDate     DateTime
+  
+  // Informations commerciales
+  totalPrice  Decimal       @db.Decimal(10, 2)
+  status      LocationStatus @default(PENDING)
+  
+  // Détails supplémentaires
+  notes       String?
+  
+  // Metadata
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  @@map("locations")
+}
+
+// ===========================
+// ENUMS
+// ===========================
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum MaterielType {
+  GRUE_MOBILE
+  GRUE_TOUR
+  TELESCOPIQUE
+  NACELLE_CISEAUX
+  NACELLE_ARTICULEE
+  NACELLE_TELESCOPIQUE
+  COMPACTEUR
+  PELLETEUSE
+  AUTRE
+}
+
+enum LocationStatus {
+  PENDING    // En attente de validation
+  CONFIRMED  // Confirmée
+  ACTIVE     // En cours
+  COMPLETED  // Terminée
+  CANCELLED  // Annulée
 }
