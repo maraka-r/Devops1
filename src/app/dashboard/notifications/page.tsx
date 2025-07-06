@@ -125,7 +125,7 @@ export default function NotificationsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Notifications</h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground ">
               {unreadCount > 0 
                 ? `Vous avez ${unreadCount} notification${unreadCount > 1 ? 's' : ''} non lue${unreadCount > 1 ? 's' : ''}`
                 : 'Toutes vos notifications sont à jour'
