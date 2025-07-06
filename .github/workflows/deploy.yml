@@ -1,0 +1,274 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma db push
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run lint
+        run: npm run lint
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_PRIVATE_KEY }}
+
+      - name: Add EC2 to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create deployment package
+        run: |
+          # Créer un package de déploiement
+          mkdir -p deploy
+          # Exclure le répertoire deploy lui-même de la copie
+          find . -maxdepth 1 -not -name deploy -not -name '.' -not -name '.git' -exec cp -r {} deploy/ \;
+          cp -r ./.env* deploy/ || true
+          cp -r ./.next deploy/ || true
+          cp -r ./node_modules deploy/ || true
+          tar -czf deploy.tar.gz -C deploy .
+
+      - name: Deploy to EC2
+        run: |
+          # Copier les fichiers nécessaires
+          scp deploy.tar.gz ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
+          scp docker-compose.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
+          scp prometheus.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
+          scp alertmanager.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
+          scp -r grafana ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
+
+          # Déployer
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "
+            # Vérifier si Docker est installé, sinon l'installer
+            if ! command -v docker &> /dev/null; then
+              echo 'Installation de Docker...'
+              sudo apt-get update
+              sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+              sudo add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu \$(lsb_release -cs) stable\"
+              sudo apt-get update
+              sudo apt-get install -y docker-ce
+              sudo usermod -aG docker \${USER}
+              echo 'Docker installé.'
+              # Nous utiliserons toujours sudo après l'installation
+              USE_SUDO=true
+            else
+              echo 'Docker déjà installé.'
+              # Vérifier si l'utilisateur peut exécuter Docker sans sudo
+              if docker info &>/dev/null; then
+                USE_SUDO=false
+                echo 'Docker accessible sans sudo.'
+              else
+                USE_SUDO=true
+                echo \"Utilisation de sudo pour Docker (l'utilisateur n'est pas dans le groupe docker).\"
+              fi
+            fi
+            
+            # Vérifier si Docker Compose est installé, sinon l'installer
+            if ! command -v docker-compose &> /dev/null; then
+              echo 'Installation de Docker Compose...'
+              sudo curl -L \"https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+              echo 'Docker Compose installé.'
+            else
+              echo 'Docker Compose déjà installé.'
+            fi
+            
+            # Créer un répertoire pour l'application si nécessaire
+            mkdir -p ~/app
+            
+            # Extraire les fichiers
+            tar -xzf deploy.tar.gz -C ~/app
+            
+            # Arrêter les conteneurs existants
+            cd ~
+            if [ "\$USE_SUDO" = true ]; then
+              sudo docker-compose down || echo "Aucun conteneur à arrêter"
+            else
+              docker-compose down || echo "Aucun conteneur à arrêter"
+            fi
+            
+            # Construire l'image localement
+            cd ~/app
+            if [ "\$USE_SUDO" = true ]; then
+              sudo docker build -t maraka-app:${{ github.sha }} .
+              sudo docker tag maraka-app:${{ github.sha }} maraka-app:latest
+            else
+              docker build -t maraka-app:${{ github.sha }} .
+              docker tag maraka-app:${{ github.sha }} maraka-app:latest
+            fi
+            
+            # Retourner au répertoire principal
+            cd ~
+            
+            # Modifier docker-compose pour utiliser l'image locale
+            sed -i 's|build: .|image: maraka-app:latest|' docker-compose.yml
+            
+            # Supprimer la référence à nginx.conf si elle existe
+            grep -q 'nginx.conf' docker-compose.yml && sed -i '/nginx.conf/d' docker-compose.yml || echo "No nginx.conf reference found"
+            
+            # Nettoyer le répertoire alert_rules.yml s'il existe (pour éviter les problèmes avec Prometheus)
+            if [ -d "alert_rules.yml" ]; then
+              echo "Suppression du répertoire alert_rules.yml..."
+              if [ "\$USE_SUDO" = true ]; then
+                sudo rm -rf alert_rules.yml
+              else
+                rm -rf alert_rules.yml
+              fi
+            fi
+            
+            # Nettoyer également le répertoire prometheus_rules.yml s'il existe (couche de sécurité supplémentaire)
+            if [ -d "prometheus_rules.yml" ]; then
+              echo "Suppression du répertoire prometheus_rules.yml..."
+              if [ "\$USE_SUDO" = true ]; then
+                sudo rm -rf prometheus_rules.yml
+              else
+                rm -rf prometheus_rules.yml
+              fi
+            fi
+            
+            # Supprimer le fichier prometheus_rules.yml s'il existe déjà
+            if [ -f "prometheus_rules.yml" ]; then
+              echo "Suppression du fichier prometheus_rules.yml existant..."
+              if [ "\$USE_SUDO" = true ]; then
+                sudo rm -f prometheus_rules.yml
+              else
+                rm -f prometheus_rules.yml
+              fi
+            fi
+            
+            # Créer le fichier prometheus_rules.yml avec le contenu des règles d'alerte
+            echo "Création du fichier prometheus_rules.yml..."
+            cat > prometheus_rules.yml << 'EOL'
+            groups:
+              - name: application_alerts
+                rules:
+                  - alert: HighErrorRate
+                    expr: rate(nextjs_http_requests_total{status=~"5.."}[5m]) > 0.1
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "High error rate detected"
+                      description: "Error rate is {{ $value }} errors per second"
+            
+                  - alert: HighResponseTime
+                    expr: histogram_quantile(0.95, rate(nextjs_http_request_duration_seconds_bucket[5m])) > 2
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "High response time detected"
+                      description: "95th percentile response time is {{ $value }}s"
+            
+                  - alert: DatabaseConnectionsHigh
+                    expr: nextjs_database_connections > 50
+                    for: 2m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "High number of database connections"
+                      description: "{{ $value }} database connections active"
+            
+              - name: infrastructure_alerts
+                rules:
+                  - alert: HighCPUUsage
+                    expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "High CPU usage detected"
+                      description: "CPU usage is {{ $value }}%"
+            
+                  - alert: HighMemoryUsage
+                    expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "High memory usage detected"
+                      description: "Memory usage is {{ $value }}%"
+            
+                  - alert: DiskSpaceLow
+                    expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 90
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Low disk space"
+                      description: "Disk usage is {{ $value }}%"
+            EOL
+            
+            # Démarrer les services
+            if [ "\$USE_SUDO" = true ]; then
+              sudo docker-compose up -d
+            else
+              docker-compose up -d
+            fi
+            
+            # Nettoyer les anciennes images
+            if [ "\$USE_SUDO" = true ]; then
+              sudo docker image prune -f
+            else
+              docker image prune -f
+            fi
+            
+            # Vérifier le déploiement
+            sleep 30
+            curl -f http://localhost:3000/api/health || exit 1
+            
+            echo 'Deployment successful!'
+          "

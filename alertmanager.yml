@@ -1,0 +1,27 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+
+receivers:
+  - name: 'web.hook'
+    # Pour activer les alertes par email, décommentez cette section et configurez avec vos informations
+    # Un serveur SMTP est toujours nécessaire pour envoyer des emails
+    # email_configs:
+    #  - to: 'votre-email@example.com'          # Email de destination
+    #    from: 'alertes@example.com'            # Email d'expédition
+    #    smarthost: 'smtp.example.com:587'      # Serveur SMTP et port
+    #    auth_username: 'utilisateur_smtp'      # Nom d'utilisateur SMTP
+    #    auth_password: 'mot_de_passe_smtp'     # Mot de passe SMTP
+    #    subject: '🚨 Alerte: {{ .GroupLabels.alertname }}'
+    #    html: |
+    #      {{ range .Alerts }}
+    #      <h3>{{ .Annotations.summary }}</h3>
+    #      <p>{{ .Annotations.description }}</p>
+    #      <hr>
+    #      {{ end }}
