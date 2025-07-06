@@ -44,3 +44,17 @@ next-env.d.ts
 
 
 ex.yml
+
+
+# Github configs
+.github/prompts/
+.github/instructions/
+.github/chatmodes/
+*.chatmode.md
+*.instructions.md
+*.prompt.md
+
+
+# VS Code settings
+.vscode/settings.json
+.vscode/extensions.json
