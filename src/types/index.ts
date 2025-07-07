@@ -1360,3 +1360,138 @@ export interface SettingsActionResponse {
 }
 
 // ===========================
+// TYPES POUR LA RECHERCHE
+// ===========================
+
+export interface SearchFilters {
+  query?: string;
+  type?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  priceMin?: number;
+  priceMax?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+export interface MaterialSearchFilters extends SearchFilters {
+  type?: MaterielType;
+  status?: MaterielStatus;
+  availableFrom?: string;
+  availableTo?: string;
+  specifications?: Record<string, unknown>;
+}
+
+export interface ClientSearchFilters extends SearchFilters {
+  role?: UserRole;
+  status?: UserStatus;
+  company?: string;
+  registeredFrom?: string;
+  registeredTo?: string;
+}
+
+export interface LocationSearchFilters extends SearchFilters {
+  userId?: string;
+  materielId?: string;
+  status?: LocationStatus;
+  startDate?: string;
+  endDate?: string;
+  totalMin?: number;
+  totalMax?: number;
+}
+
+export interface SearchResult<T> {
+  id: string;
+  relevanceScore: number;
+  item: T;
+  highlights?: {
+    field: string;
+    value: string;
+    matchedText: string;
+  }[];
+}
+
+export interface MaterialSearchResult extends SearchResult<Materiel> {
+  item: Materiel & {
+    availability?: {
+      isAvailable: boolean;
+      nextAvailableDate?: string;
+      currentLocation?: {
+        id: string;
+        endDate: string;
+        user: {
+          name: string;
+        };
+      };
+    };
+  };
+}
+
+export interface ClientSearchResult extends SearchResult<Omit<User, 'password'>> {
+  item: Omit<User, 'password'> & {
+    stats?: {
+      totalLocations: number;
+      totalSpent: number;
+      lastLocationDate?: string;
+      averageOrderValue: number;
+    };
+  };
+}
+
+export interface LocationSearchResult extends SearchResult<Location> {
+  item: Location & {
+    user: Pick<User, 'id' | 'name' | 'email' | 'company'>;
+    materiel: Pick<Materiel, 'id' | 'name' | 'type' | 'pricePerDay'>;
+  };
+}
+
+export interface SearchResponse<T> {
+  success: boolean;
+  data: {
+    results: T[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+    facets?: {
+      types?: { type: string; count: number }[];
+      statuses?: { status: string; count: number }[];
+      priceRanges?: { range: string; count: number }[];
+      categories?: { category: string; count: number }[];
+    };
+    suggestions?: string[];
+    searchTime: number;
+  };
+  message?: string;
+}
+
+export type MaterialSearchResponse = SearchResponse<MaterialSearchResult>;
+export type ClientSearchResponse = SearchResponse<ClientSearchResult>;
+export type LocationSearchResponse = SearchResponse<LocationSearchResult>;
+
+export interface SearchStats {
+  totalSearches: number;
+  popularQueries: Array<{
+    query: string;
+    count: number;
+    category: 'materials' | 'clients' | 'locations';
+  }>;
+  recentSearches: Array<{
+    query: string;
+    category: 'materials' | 'clients' | 'locations';
+    timestamp: string;
+    userId?: string;
+  }>;
+  noResultsQueries: Array<{
+    query: string;
+    count: number;
+    category: 'materials' | 'clients' | 'locations';
+  }>;
+}
+
+// ===========================
