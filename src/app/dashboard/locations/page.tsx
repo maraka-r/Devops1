@@ -27,102 +27,85 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react';
-
-interface Location {
-  id: number;
-  startDate: string;
-  endDate: string;
-  status: 'EN_COURS' | 'TERMINEE' | 'ANNULEE' | 'EN_RETARD';
-  totalPrice: number;
-  createdAt: string;
-  updatedAt: string;
-  materiel: {
-    id: number;
-    name: string;
-    reference: string;
-    pricePerDay: number;
-  };
-  user: {
-    id: number;
-    name: string;
-    email: string;
-  };
-}
+import { useLocations } from '@/hooks/api/useLocations';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { formatCurrency } from '@/lib/utils';
+import { LocationWithDetails, LocationStatus } from '@/types';
 
 const statusColors = {
-  EN_COURS: 'default',
-  TERMINEE: 'secondary',
-  ANNULEE: 'destructive',
-  EN_RETARD: 'destructive'
+  PENDING: 'secondary',
+  CONFIRMED: 'default',
+  ACTIVE: 'default',
+  COMPLETED: 'secondary',
+  CANCELLED: 'destructive'
 } as const;
 
 const statusLabels = {
-  EN_COURS: 'En cours',
-  TERMINEE: 'Terminée',
-  ANNULEE: 'Annulée',
-  EN_RETARD: 'En retard'
+  PENDING: 'En attente',
+  CONFIRMED: 'Confirmée',
+  ACTIVE: 'En cours',
+  COMPLETED: 'Terminée',
+  CANCELLED: 'Annulée'
 } as const;
 
-export default function LocationsPage() {
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function LocationsContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Utilisation du hook useLocations pour la gestion des données
+  const {
+    locationsWithDetails,
+    isLoading,
+    error,
+    fetchLocationsWithDetails,
+    clearError,
+    refreshLocations
+  } = useLocations();
 
-  // Fetch locations
+  // Chargement initial des locations
   useEffect(() => {
-    fetchLocations();
-  }, []);
+    fetchLocationsWithDetails();
+  }, [fetchLocationsWithDetails]);
 
-  const fetchLocations = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/locations');
-      if (!response.ok) {
-        throw new Error('Erreur lors du chargement des locations');
-      }
-      const data = await response.json();
-      setLocations(data.locations || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filter locations
-  const filteredLocations = locations.filter(location => {
+  // Filtrage des locations
+  const filteredLocations = locationsWithDetails.filter(location => {
     const matchesSearch = location.materiel.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          location.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         location.materiel.reference.toLowerCase().includes(searchTerm.toLowerCase());
+                         location.materiel.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || location.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: LocationStatus) => {
     switch (status) {
-      case 'EN_COURS':
-        return <Clock className="h-4 w-4 text-blue-500" />;
-      case 'TERMINEE':
+      case 'PENDING':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'CONFIRMED':
+        return <CheckCircle className="h-4 w-4 text-blue-500" />;
+      case 'ACTIVE':
+        return <Calendar className="h-4 w-4 text-green-500" />;
+      case 'COMPLETED':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'ANNULEE':
-        return <AlertCircle className="h-4 w-4 text-gray-500" />;
-      case 'EN_RETARD':
+      case 'CANCELLED':
         return <AlertCircle className="h-4 w-4 text-red-500" />;
       default:
         return null;
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR');
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
-  const calculateDuration = (startDate: string, endDate: string) => {
+  const calculateDuration = (startDate: Date, endDate: Date) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
@@ -130,7 +113,11 @@ export default function LocationsPage() {
     return diffDays;
   };
 
-  if (loading) {
+  const handleRefresh = async () => {
+    await refreshLocations();
+  };
+
+  if (isLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
@@ -150,9 +137,15 @@ export default function LocationsPage() {
           <div className="text-center">
             <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
             <p className="text-lg font-semibold text-red-600">{error}</p>
-            <Button onClick={fetchLocations} className="mt-4">
-              Réessayer
-            </Button>
+            <div className="flex gap-2 mt-4 justify-center">
+              <Button onClick={handleRefresh} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Réessayer
+              </Button>
+              <Button onClick={clearError} variant="ghost">
+                Fermer
+              </Button>
+            </div>
           </div>
         </div>
       </DashboardLayout>
@@ -309,12 +302,12 @@ export default function LocationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredLocations.map((location) => (
+                  {filteredLocations.map((location: LocationWithDetails) => (
                     <TableRow key={location.id}>
                       <TableCell>
                         <div>
                           <div className="font-medium">{location.materiel.name}</div>
-                          <div className="text-sm text-muted-foreground">{location.materiel.reference}</div>
+                          <div className="text-sm text-muted-foreground">{location.materiel.id}</div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -342,7 +335,7 @@ export default function LocationsPage() {
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">{location.totalPrice}€</TableCell>
+                      <TableCell className="font-medium">{formatCurrency(Number(location.totalPrice))}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button size="sm" variant="outline">
@@ -367,3 +360,13 @@ export default function LocationsPage() {
     </DashboardLayout>
   );
 }
+
+function LocationsPageProtected() {
+  return (
+    <ProtectedRoute>
+      <LocationsContent />
+    </ProtectedRoute>
+  );
+}
+
+export default LocationsPageProtected;

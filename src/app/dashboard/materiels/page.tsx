@@ -25,98 +25,91 @@ import {
   Eye,
   Wrench,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
-
-interface Materiel {
-  id: number;
-  name: string;
-  reference: string;
-  category: string;
-  status: 'DISPONIBLE' | 'LOUE' | 'MAINTENANCE' | 'HORS_SERVICE';
-  pricePerDay: number;
-  description?: string;
-  purchaseDate: string;
-  condition: 'NEUF' | 'TRES_BON' | 'BON' | 'MOYEN' | 'MAUVAIS';
-  createdAt: string;
-  updatedAt: string;
-}
+import { useMaterials } from '@/hooks/api/useMaterials';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { formatCurrency } from '@/lib/utils';
+import { Materiel, MaterielStatus } from '@/types';
 
 const statusColors = {
-  DISPONIBLE: 'default',
-  LOUE: 'secondary',
+  AVAILABLE: 'default',
+  RENTED: 'secondary', 
   MAINTENANCE: 'destructive',
-  HORS_SERVICE: 'outline'
+  OUT_OF_ORDER: 'outline',
+  RETIRED: 'outline'
 } as const;
 
 const statusLabels = {
-  DISPONIBLE: 'Disponible',
-  LOUE: 'Loué',
+  AVAILABLE: 'Disponible',
+  RENTED: 'Loué',
   MAINTENANCE: 'Maintenance',
-  HORS_SERVICE: 'Hors service'
+  OUT_OF_ORDER: 'Hors service',
+  RETIRED: 'Retiré'
 } as const;
 
-const conditionLabels = {
-  NEUF: 'Neuf',
-  TRES_BON: 'Très bon',
-  BON: 'Bon',
-  MOYEN: 'Moyen',
-  MAUVAIS: 'Mauvais'
+const typeLabels = {
+  GRUE_MOBILE: 'Grue mobile',
+  GRUE_TOUR: 'Grue tour',
+  TELESCOPIQUE: 'Télescopique',
+  NACELLE_CISEAUX: 'Nacelle ciseaux',
+  NACELLE_ARTICULEE: 'Nacelle articulée',
+  NACELLE_TELESCOPIQUE: 'Nacelle télescopique',
+  COMPACTEUR: 'Compacteur',
+  PELLETEUSE: 'Pelleteuse',
+  AUTRE: 'Autre'
 } as const;
 
-export default function MaterielsPage() {
-  const [materiels, setMateriels] = useState<Materiel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function MaterielsContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Utilisation du hook useMaterials pour la gestion des données
+  const {
+    materials,
+    isLoading,
+    error,
+    fetchMaterials,
+    clearError,
+    refreshMaterials
+  } = useMaterials();
 
-  // Fetch materiels
+  // Chargement initial des matériels
   useEffect(() => {
-    fetchMateriels();
-  }, []);
+    fetchMaterials();
+  }, [fetchMaterials]);
 
-  const fetchMateriels = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/materiels');
-      if (!response.ok) {
-        throw new Error('Erreur lors du chargement des matériels');
-      }
-      const data = await response.json();
-      setMateriels(data.materiels || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filter materiels
-  const filteredMateriels = materiels.filter(materiel => {
-    const matchesSearch = materiel.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         materiel.reference.toLowerCase().includes(searchTerm.toLowerCase());
+  // Filtrage des matériels
+  const filteredMaterials = materials.filter(materiel => {
+    const matchesSearch = materiel.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || materiel.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: MaterielStatus) => {
     switch (status) {
-      case 'DISPONIBLE':
+      case 'AVAILABLE':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'LOUE':
+      case 'RENTED':
         return <Eye className="h-4 w-4 text-blue-500" />;
       case 'MAINTENANCE':
         return <Wrench className="h-4 w-4 text-orange-500" />;
-      case 'HORS_SERVICE':
+      case 'OUT_OF_ORDER':
         return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case 'RETIRED':
+        return <AlertCircle className="h-4 w-4 text-gray-500" />;
       default:
         return null;
     }
   };
 
-  if (loading) {
+  const handleRefresh = async () => {
+    await refreshMaterials();
+  };
+
+  if (isLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
@@ -136,9 +129,15 @@ export default function MaterielsPage() {
           <div className="text-center">
             <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
             <p className="text-lg font-semibold text-red-600">{error}</p>
-            <Button onClick={fetchMateriels} className="mt-4">
-              Réessayer
-            </Button>
+            <div className="flex gap-2 mt-4 justify-center">
+              <Button onClick={handleRefresh} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Réessayer
+              </Button>
+              <Button onClick={clearError} variant="ghost">
+                Fermer
+              </Button>
+            </div>
           </div>
         </div>
       </DashboardLayout>
@@ -233,7 +232,7 @@ export default function MaterielsPage() {
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder="Nom ou référence..."
+                    placeholder="Nom du matériel..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -248,10 +247,11 @@ export default function MaterielsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les statuts</SelectItem>
-                    <SelectItem value="DISPONIBLE">Disponible</SelectItem>
-                    <SelectItem value="LOUE">Loué</SelectItem>
+                    <SelectItem value="AVAILABLE">Disponible</SelectItem>
+                    <SelectItem value="RENTED">Loué</SelectItem>
                     <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
-                    <SelectItem value="HORS_SERVICE">Hors service</SelectItem>
+                    <SelectItem value="OUT_OF_ORDER">Hors service</SelectItem>
+                    <SelectItem value="RETIRED">Retiré</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -262,10 +262,10 @@ export default function MaterielsPage() {
         {/* Results */}
         <Card>
           <CardHeader>
-            <CardTitle>Matériels ({filteredMateriels.length})</CardTitle>
+            <CardTitle>Matériels ({filteredMaterials.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            {filteredMateriels.length === 0 ? (
+            {filteredMaterials.length === 0 ? (
               <div className="text-center py-8">
                 <Wrench className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                 <p className="text-lg font-semibold text-muted-foreground">
@@ -280,20 +280,18 @@ export default function MaterielsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nom</TableHead>
-                    <TableHead>Référence</TableHead>
-                    <TableHead>Catégorie</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Prix/jour</TableHead>
-                    <TableHead>État</TableHead>
+                    <TableHead>Description</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredMateriels.map((materiel) => (
+                  {filteredMaterials.map((materiel: Materiel) => (
                     <TableRow key={materiel.id}>
                       <TableCell className="font-medium">{materiel.name}</TableCell>
-                      <TableCell>{materiel.reference}</TableCell>
-                      <TableCell>{materiel.category}</TableCell>
+                      <TableCell>{typeLabels[materiel.type as keyof typeof typeLabels] || materiel.type}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {getStatusIcon(materiel.status)}
@@ -302,17 +300,19 @@ export default function MaterielsPage() {
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell>{materiel.pricePerDay}€</TableCell>
-                      <TableCell>{conditionLabels[materiel.condition]}</TableCell>
+                      <TableCell>{formatCurrency(Number(materiel.pricePerDay))}</TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {materiel.description || 'Aucune description'}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" title="Voir les détails">
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" title="Modifier">
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" title="Supprimer">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -326,5 +326,13 @@ export default function MaterielsPage() {
         </Card>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function MaterielsPage() {
+  return (
+    <ProtectedRoute>
+      <MaterielsContent />
+    </ProtectedRoute>
   );
 }

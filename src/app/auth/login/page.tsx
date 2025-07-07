@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
-export default function LoginPage() {
+function LoginForm() {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -12,6 +13,30 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { login, isAuthenticated, user } = useAuth();
+
+  // Redirection automatique si déjà connecté
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const from = searchParams.get('from');
+      if (from) {
+        router.push(from);
+      } else {
+        // Redirection basée sur le rôle
+        switch (user.role) {
+          case 'ADMIN':
+            router.push('/dashboard');
+            break;
+          case 'USER':
+            router.push('/client');
+            break;
+          default:
+            router.push('/dashboard');
+        }
+      }
+    }
+  }, [isAuthenticated, user, router, searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -26,24 +51,10 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Rediriger vers le dashboard
-        router.push('/dashboard');
-      } else {
-        setError(data.error || 'Erreur lors de la connexion');
-      }
-    } catch {
-      setError('Erreur de connexion. Veuillez réessayer.');
+      await login(formData);
+      // La redirection se fera automatiquement via useEffect
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la connexion');
     } finally {
       setLoading(false);
     }
@@ -195,5 +206,22 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Chargement...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
