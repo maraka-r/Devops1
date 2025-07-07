@@ -1,3 +1,8 @@
+// API Route pour la gestion d'une location spécifique
+// GET /api/locations/[id] - Récupérer une location par ID
+// PUT /api/locations/[id] - Modifier une location par ID
+// DELETE /api/locations/[id] - Supprimer une location par ID
+
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

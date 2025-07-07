@@ -58,3 +58,7 @@ ex.yml
 # VS Code settings
 .vscode/settings.json
 .vscode/extensions.json
+
+# Dossiers docs et test-scripts
+/docs/
+/test-scripts/

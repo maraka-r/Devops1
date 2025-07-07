@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/db';
 import { updateMaterielSchema } from '@/lib/validation';
+import { handlePrismaError } from '@/lib/utils';
+import prisma from '@/lib/db';
 
 // GET /api/materiels/[id] - Récupérer un matériel par ID
 export async function GET(
@@ -13,7 +14,12 @@ export async function GET(
       where: { id: params.id },
       include: {
         locations: {
-          include: {
+          select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+            status: true,
+            totalPrice: true,
             user: {
               select: {
                 id: true,
@@ -38,96 +44,174 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: materiel
+      data: materiel,
+      message: 'Matériel récupéré avec succès'
     });
   } catch (error) {
     console.error('Erreur lors de la récupération du matériel:', error);
+    const errorMessage = handlePrismaError(error);
     return NextResponse.json({
       success: false,
-      error: 'Erreur lors de la récupération du matériel'
-    }, { status: 500 });
+      error: errorMessage
+    }, { status: 400 });
   }
 }
 
-// PUT /api/materiels/[id] - Mettre à jour un matériel
+// PUT /api/materiels/[id] - Mettre à jour un matériel (admin seulement)
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // TODO: Vérifier l'authentification et les permissions admin
-    const isAuthenticated = true; // Placeholder
-    const isAdmin = true; // Placeholder
+    // TODO: Implémenter la vérification d'authentification admin
+    // Pour l'instant, on utilise un placeholder
+    const isAuthenticated = true;
+    const isAdmin = true;
     
     if (!isAuthenticated || !isAdmin) {
       return NextResponse.json({
         success: false,
-        error: 'Accès non autorisé'
+        error: 'Accès non autorisé - Admin requis'
       }, { status: 403 });
     }
 
     const body = await request.json();
-    const validatedData = updateMaterielSchema.parse(body);
     const params = await context.params;
+    
+    // Validation des données
+    const validation = updateMaterielSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Données invalides', 
+          details: validation.error.format() 
+        },
+        { status: 400 }
+      );
+    }
 
+    // Vérifier que le matériel existe
+    const existingMateriel = await prisma.materiel.findUnique({
+      where: { id: params.id }
+    });
+
+    if (!existingMateriel) {
+      return NextResponse.json(
+        { success: false, error: 'Matériel non trouvé' },
+        { status: 404 }
+      );
+    }
+
+    const { name, type, description, pricePerDay, available, specifications, images, manualUrl } = validation.data;
+
+    // Préparer les données de mise à jour
     const updateData: Record<string, unknown> = {};
-    if (validatedData.name) updateData.name = validatedData.name;
-    if (validatedData.type) updateData.type = validatedData.type;
-    if (validatedData.description !== undefined) updateData.description = validatedData.description;
-    if (validatedData.pricePerDay) updateData.pricePerDay = validatedData.pricePerDay;
-    if (validatedData.available !== undefined) updateData.available = validatedData.available;
-    if (validatedData.specifications) updateData.specifications = JSON.parse(JSON.stringify(validatedData.specifications));
-    if (validatedData.images) updateData.images = validatedData.images;
+    
+    if (name !== undefined) updateData.name = name;
+    if (type !== undefined) updateData.type = type;
+    if (description !== undefined) updateData.description = description;
+    if (pricePerDay !== undefined) updateData.pricePerDay = pricePerDay;
+    if (available !== undefined) updateData.available = available;
+    if (specifications !== undefined) updateData.specifications = specifications;
+    if (images !== undefined) updateData.images = images;
+    if (manualUrl !== undefined) updateData.manualUrl = manualUrl;
 
     const materiel = await prisma.materiel.update({
       where: { id: params.id },
-      data: updateData
+      data: updateData,
+      include: {
+        locations: {
+          select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+            status: true,
+            totalPrice: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        }
+      }
     });
 
     return NextResponse.json({
       success: true,
-      data: materiel
+      data: materiel,
+      message: 'Matériel modifié avec succès'
     });
   } catch (error) {
     console.error('Erreur lors de la mise à jour du matériel:', error);
+    const errorMessage = handlePrismaError(error);
     return NextResponse.json({
       success: false,
-      error: 'Erreur lors de la mise à jour du matériel'
-    }, { status: 500 });
+      error: errorMessage
+    }, { status: 400 });
   }
 }
 
-// DELETE /api/materiels/[id] - Supprimer un matériel
+// DELETE /api/materiels/[id] - Supprimer un matériel (admin seulement)
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // TODO: Vérifier l'authentification et les permissions admin
-    const isAuthenticated = true; // Placeholder
-    const isAdmin = true; // Placeholder
+    // TODO: Implémenter la vérification d'authentification admin
+    // Pour l'instant, on utilise un placeholder
+    const isAuthenticated = true;
+    const isAdmin = true;
     
     if (!isAuthenticated || !isAdmin) {
       return NextResponse.json({
         success: false,
-        error: 'Accès non autorisé'
+        error: 'Accès non autorisé - Admin requis'
       }, { status: 403 });
     }
 
     const params = await context.params;
-    // Vérifier s'il y a des locations actives
-    const activeLocations = await prisma.location.findMany({
-      where: {
-        materielId: params.id,
-        status: 'ACTIVE'
+    
+    // Vérifier que le matériel existe
+    const materiel = await prisma.materiel.findUnique({
+      where: { id: params.id },
+      include: {
+        _count: {
+          select: {
+            locations: true
+          }
+        }
       }
     });
 
-    if (activeLocations.length > 0) {
+    if (!materiel) {
+      return NextResponse.json(
+        { success: false, error: 'Matériel non trouvé' },
+        { status: 404 }
+      );
+    }
+
+    // Vérifier s'il y a des locations actives
+    const activeLocations = await prisma.location.count({
+      where: {
+        materielId: params.id,
+        status: {
+          in: ['PENDING', 'CONFIRMED', 'ACTIVE']
+        }
+      }
+    });
+
+    if (activeLocations > 0) {
       return NextResponse.json({
         success: false,
-        error: 'Impossible de supprimer un matériel avec des locations actives'
-      }, { status: 400 });
+        error: `Impossible de supprimer le matériel: ${activeLocations} location(s) active(s)`
+      }, { status: 409 });
     }
 
     await prisma.materiel.delete({
@@ -140,9 +224,10 @@ export async function DELETE(
     });
   } catch (error) {
     console.error('Erreur lors de la suppression du matériel:', error);
+    const errorMessage = handlePrismaError(error);
     return NextResponse.json({
       success: false,
-      error: 'Erreur lors de la suppression du matériel'
-    }, { status: 500 });
+      error: errorMessage
+    }, { status: 400 });
   }
 }

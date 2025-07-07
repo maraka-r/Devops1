@@ -33,7 +33,10 @@ model User {
   updatedAt   DateTime @updatedAt
   
   // Relations
-  locations   Location[]
+  locations     Location[]
+  favoris       Favori[]
+  invoices      Invoice[]
+  payments      Payment[]
   
   @@map("users")
 }
@@ -59,6 +62,7 @@ model Materiel {
   
   // Relations
   locations     Location[]
+  favoris       Favori[]
   
   @@map("materiels")
 }
@@ -88,7 +92,120 @@ model Location {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   
+  // Relations billing
+  invoiceItems InvoiceItem[]
+  
   @@map("locations")
+}
+
+model Favori {
+  id          String    @id @default(cuid())
+  
+  // Relations
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  materielId  String
+  materiel    Materiel  @relation(fields: [materielId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  createdAt   DateTime  @default(now())
+  
+  // Un utilisateur ne peut avoir qu'un seul favori par matériel
+  @@unique([userId, materielId])
+  @@map("favoris")
+}
+
+// ===========================
+// MODÈLES DE FACTURATION
+// ===========================
+
+model Invoice {
+  id            String        @id @default(cuid())
+  number        String        @unique // Numéro de facture (auto-généré)
+  
+  // Relations
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Informations facture
+  status        InvoiceStatus @default(DRAFT)
+  totalAmount   Decimal       @db.Decimal(10, 2)
+  taxAmount     Decimal       @db.Decimal(10, 2) @default(0)
+  discountAmount Decimal      @db.Decimal(10, 2) @default(0)
+  
+  // Dates
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime
+  paidDate      DateTime?
+  
+  // Détails
+  description   String?
+  notes         String?
+  
+  // Metadata
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  // Relations
+  items         InvoiceItem[]
+  payments      Payment[]
+  
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  
+  // Relations
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  locationId  String?
+  location    Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  
+  // Détails de la ligne
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  totalPrice  Decimal  @db.Decimal(10, 2)
+  
+  // Metadata
+  createdAt   DateTime @default(now())
+  
+  @@map("invoice_items")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  
+  // Relations
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  invoiceId     String?
+  invoice       Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  
+  // Informations paiement
+  amount        Decimal       @db.Decimal(10, 2)
+  method        PaymentMethod @default(DEMO)
+  status        PaymentStatus @default(PENDING)
+  
+  // Détails transaction (simulation)
+  transactionId String?       @unique
+  reference     String?
+  
+  // Dates
+  processedAt   DateTime?
+  
+  // Metadata
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  // Détails additionnels
+  notes         String?
+  
+  @@map("payments")
 }
 
 // ===========================
@@ -118,4 +235,29 @@ enum LocationStatus {
   ACTIVE     // En cours
   COMPLETED  // Terminée
   CANCELLED  // Annulée
+}
+
+enum InvoiceStatus {
+  DRAFT      // Brouillon
+  PENDING    // En attente de paiement
+  PAID       // Payée
+  OVERDUE    // En retard
+  CANCELLED  // Annulée
+}
+
+enum PaymentMethod {
+  DEMO       // Mode démonstration
+  CARD       // Carte bancaire
+  TRANSFER   // Virement
+  CHECK      // Chèque
+  CASH       // Espèces
+  OTHER      // Autre
+}
+
+enum PaymentStatus {
+  PENDING    // En attente
+  PROCESSING // En cours de traitement
+  COMPLETED  // Terminé
+  FAILED     // Échoué
+  CANCELLED  // Annulé
 }

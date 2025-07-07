@@ -6,16 +6,22 @@ import {
   User, 
   Materiel, 
   Location, 
+  Invoice,
+  InvoiceItem,
+  Payment,
   UserRole, 
   MaterielType, 
-  LocationStatus 
+  LocationStatus,
+  InvoiceStatus,
+  PaymentMethod,
+  PaymentStatus
 } from '@/generated/prisma';
 
 // Réexporter les types comme des valeurs (pour Zod)
-export { UserRole, MaterielType, LocationStatus };
+export { UserRole, MaterielType, LocationStatus, InvoiceStatus, PaymentMethod, PaymentStatus };
 
 // Réexporter les types d'entités
-export type { User, Materiel, Location };
+export type { User, Materiel, Location, Invoice, InvoiceItem, Payment };
 
 // ===========================
 // TYPES POUR L'AUTHENTIFICATION
@@ -37,6 +43,15 @@ export interface RegisterRequest {
 export interface AuthResponse {
   user: Omit<User, 'password'>;
   token: string;
+}
+
+// Types pour les requêtes authentifiées
+export interface AuthenticatedRequest extends Request {
+  user: {
+    id: string;
+    email: string;
+    role: UserRole;
+  };
 }
 
 // ===========================
@@ -236,4 +251,108 @@ export interface Notification {
   title: string;
   message: string;
   duration?: number;
+}
+
+// ===========================
+// TYPES POUR LA FACTURATION
+// ===========================
+
+export interface InvoiceWithDetails extends Invoice {
+  user: User;
+  items: InvoiceItem[];
+  payments: Payment[];
+}
+
+export interface InvoiceCreateRequest {
+  userId: string;
+  locationIds?: string[];
+  dueDate: string;
+  description?: string;
+  notes?: string;
+  items: {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    locationId?: string;
+  }[];
+}
+
+export interface InvoiceUpdateRequest {
+  status?: InvoiceStatus;
+  dueDate?: string;
+  description?: string;
+  notes?: string;
+}
+
+export interface PaymentCreateRequest {
+  invoiceId?: string;
+  amount: number;
+  method: PaymentMethod;
+  reference?: string;
+  notes?: string;
+}
+
+export interface PaymentUpdateRequest {
+  status?: PaymentStatus;
+  transactionId?: string;
+  reference?: string;
+  notes?: string;
+}
+
+export interface BillingSummary {
+  totalInvoiced: number;
+  totalPaid: number;
+  totalPending: number;
+  totalOverdue: number;
+  invoiceCount: number;
+  paymentCount: number;
+  averageInvoiceAmount: number;
+}
+
+export interface InvoiceFilters {
+  userId?: string;
+  status?: InvoiceStatus;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface PaymentFilters {
+  userId?: string;
+  invoiceId?: string;
+  status?: PaymentStatus;
+  method?: PaymentMethod;
+  startDate?: string;
+  endDate?: string;
+}
+
+// ===========================
+// TYPES POUR LES STATISTIQUES DE FACTURATION
+// ===========================
+
+export interface InvoiceStats {
+  totalAmount: number;
+  count: number;
+  avgAmount: number;
+  byStatus: Record<InvoiceStatus, { count: number; amount: number }>;
+  byMonth: Array<{
+    month: string;
+    count: number;
+    amount: number;
+  }>;
+}
+
+export interface PaymentStats {
+  totalAmount: number;
+  count: number;
+  avgAmount: number;
+  byStatus: Record<PaymentStatus, { count: number; amount: number }>;
+  byMethod: Record<PaymentMethod, { count: number; amount: number }>;
+}
+
+export interface UpcomingInvoices {
+  dueThisWeek: Invoice[];
+  dueThisMonth: Invoice[];
+  overdue: Invoice[];
+  total: number;
+  totalAmount: number;
 }
