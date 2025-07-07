@@ -52,7 +52,9 @@ jobs:
         run: npm run lint
 
   deploy:
+    needs: test
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
@@ -94,7 +96,6 @@ jobs:
           scp prometheus.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
           scp alertmanager.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
           scp -r grafana ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
-          scp .env ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
 
       - name: Deploy on EC2
         run: |
@@ -113,12 +114,11 @@ jobs:
             mv ~/alertmanager.yml ~/app/
             mv -f ~/grafana ~/app/
             mv ~/image.tar.gz ~/app/
-            mv ~/.env ~/app/.env
 
             cd ~/app
 
-            # Modifier docker-compose.yml pour utiliser l'image locale
-            sed -i 's|build: .|image: maraka-app:latest|' docker-compose.yml
+            # Modifier docker-compose.yml pour utiliser l'image tagguée
+            sed -i 's|image: maraka-app:latest|image: maraka-app:${{ github.sha }}|' docker-compose.yml
 
             # Supprimer nginx.conf s'il est mentionné
             sed -i '/nginx.conf/d' docker-compose.yml || true
