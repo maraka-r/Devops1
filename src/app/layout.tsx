@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 // Configuration optimisée de la police Inter
 const inter = Inter({
@@ -96,9 +97,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <meta name="msapplication-config" content="/browserconfig.xml" />
       </head>
       <body className="font-inter antialiased bg-background text-foreground">
-        <div id="root" className="min-h-screen">
-          {children}
-        </div>
+        <AuthProvider>
+          <div id="root" className="min-h-screen">
+            {children}
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );

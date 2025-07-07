@@ -1,3 +1,5 @@
+'use client';
+
 import { DashboardLayout } from '@/components/dashboard/layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,52 +12,49 @@ import {
   TrendingUp, 
   AlertCircle,
   Calendar,
-  Plus
+  Plus,
+  RefreshCw
 } from 'lucide-react';
+import { useDashboard } from '@/hooks/api/useDashboard';
+import { formatCurrency, formatDateFR } from '@/lib/utils';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import Link from 'next/link';
 
-// Mock data - in a real app, this would come from your API
-const stats = {
-  totalMaterials: 45,
-  activeRentals: 23,
-  totalClients: 87,
-  monthlyRevenue: 12450,
-  availableMaterials: 22,
-  overdueRentals: 3,
-  upcomingDeadlines: 8,
-  maintenanceNeeded: 2
+// Types pour fallback quand les données ne sont pas encore chargées
+const fallbackStats = {
+  totalUsers: 0,
+  totalMateriels: 0,
+  totalLocations: 0,
+  activeLocations: 0,
+  monthlyRevenue: 0,
+  materiels: {
+    available: 0,
+    rented: 0,
+    maintenance: 0,
+  },
 };
 
-const recentRentals = [
-  {
-    id: 1,
-    client: "Entreprise Martin",
-    material: "Pelleteuse CAT 320",
-    startDate: "2024-01-15",
-    endDate: "2024-01-25",
-    status: "active",
-    amount: 2400
-  },
-  {
-    id: 2,
-    client: "BTP Solutions",
-    material: "Grue mobile 50T",
-    startDate: "2024-01-10",
-    endDate: "2024-01-20",
-    status: "overdue",
-    amount: 3200
-  },
-  {
-    id: 3,
-    client: "Construction Moderne",
-    material: "Camion-benne 20T",
-    startDate: "2024-01-18",
-    endDate: "2024-01-28",
-    status: "active",
-    amount: 1800
-  }
-];
+const fallbackAlerts = {
+  overdueRentals: 0,
+  upcomingDeadlines: 0,
+  maintenanceNeeded: 0,
+  lowStock: 0,
+};
 
-export default function DashboardPage() {
+function DashboardContent() {
+  const { 
+    stats, 
+    alerts, 
+    recentActivity, 
+    isLoading, 
+    error, 
+    refreshAll 
+  } = useDashboard({ autoRefresh: true, refreshInterval: 60000 });
+
+  const currentStats = stats || fallbackStats;
+  const currentAlerts = alerts || fallbackAlerts;
+  const recentLocations = recentActivity?.locations || [];
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -68,16 +67,34 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle location
+            <Button onClick={refreshAll} variant="outline" disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Actualiser
             </Button>
-            <Button variant="outline">
-              <Wrench className="h-4 w-4 mr-2" />
-              Ajouter matériel
-            </Button>
+            <Link href="/dashboard/locations/new">
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Nouvelle location
+              </Button>
+            </Link>
+            <Link href="/dashboard/materiels/new">
+              <Button variant="outline">
+                <Wrench className="h-4 w-4 mr-2" />
+                Ajouter matériel
+              </Button>
+            </Link>
           </div>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+              <span className="text-red-700">{error}</span>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -87,9 +104,11 @@ export default function DashboardPage() {
               <Wrench className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalMaterials}</div>
+              <div className="text-2xl font-bold">
+                {isLoading ? '...' : currentStats.totalMateriels}
+              </div>
               <p className="text-xs text-muted-foreground">
-                {stats.availableMaterials} disponibles
+                {currentStats.materiels.available} disponibles
               </p>
             </CardContent>
           </Card>
@@ -100,9 +119,11 @@ export default function DashboardPage() {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.activeRentals}</div>
+              <div className="text-2xl font-bold">
+                {isLoading ? '...' : currentStats.activeLocations}
+              </div>
               <p className="text-xs text-muted-foreground">
-                +3 depuis hier
+                {currentStats.totalLocations} total
               </p>
             </CardContent>
           </Card>
@@ -113,9 +134,11 @@ export default function DashboardPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalClients}</div>
+              <div className="text-2xl font-bold">
+                {isLoading ? '...' : currentStats.totalUsers}
+              </div>
               <p className="text-xs text-muted-foreground">
-                +12% ce mois
+                +{recentActivity?.newClients || 0} ce mois
               </p>
             </CardContent>
           </Card>
@@ -126,10 +149,12 @@ export default function DashboardPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.monthlyRevenue.toLocaleString()}€</div>
+              <div className="text-2xl font-bold">
+                {isLoading ? '...' : formatCurrency(currentStats.monthlyRevenue)}
+              </div>
               <p className="text-xs text-muted-foreground">
                 <TrendingUp className="h-3 w-3 inline mr-1" />
-                +8% vs mois dernier
+                vs mois dernier
               </p>
             </CardContent>
           </Card>
@@ -148,15 +173,27 @@ export default function DashboardPage() {
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Locations en retard</span>
-                <Badge variant="destructive">{stats.overdueRentals}</Badge>
+                <Badge variant="destructive">
+                  {isLoading ? '...' : currentAlerts.overdueRentals}
+                </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Échéances proches</span>
-                <Badge variant="secondary">{stats.upcomingDeadlines}</Badge>
+                <Badge variant="secondary">
+                  {isLoading ? '...' : currentAlerts.upcomingDeadlines}
+                </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Maintenance requise</span>
-                <Badge variant="outline">{stats.maintenanceNeeded}</Badge>
+                <Badge variant="outline">
+                  {isLoading ? '...' : currentAlerts.maintenanceNeeded}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Stock bas</span>
+                <Badge variant="outline">
+                  {isLoading ? '...' : currentAlerts.lowStock}
+                </Badge>
               </div>
             </CardContent>
           </Card>
@@ -170,36 +207,70 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {recentRentals.map((rental) => (
-                  <div key={rental.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="font-medium">{rental.client}</p>
-                          <p className="text-sm text-muted-foreground">{rental.material}</p>
+              {isLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                        <div className="h-3 bg-gray-100 rounded w-3/4 animate-pulse"></div>
+                      </div>
+                      <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : recentLocations.length > 0 ? (
+                <div className="space-y-4">
+                  {recentLocations.slice(0, 3).map((location) => (
+                    <div key={location.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <p className="font-medium">{location.user.name}</p>
+                            <p className="text-sm text-muted-foreground">{location.materiel.name}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatDateFR(new Date(location.startDate))} - {formatDateFR(new Date(location.endDate))}
+                          </span>
+                          <span className="font-medium">{formatCurrency(Number(location.totalPrice) || 0)}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {rental.startDate} - {rental.endDate}
-                        </span>
-                        <span className="font-medium">{rental.amount}€</span>
-                      </div>
+                      <Badge 
+                        variant={
+                          location.status === 'ACTIVE' ? 'default' : 
+                          location.status === 'COMPLETED' ? 'secondary' :
+                          'destructive'
+                        }
+                      >
+                        {location.status === 'ACTIVE' ? 'Actif' : 
+                         location.status === 'COMPLETED' ? 'Terminé' : 
+                         location.status === 'PENDING' ? 'En attente' :
+                         'Annulé'}
+                      </Badge>
                     </div>
-                    <Badge 
-                      variant={rental.status === 'active' ? 'default' : 'destructive'}
-                    >
-                      {rental.status === 'active' ? 'Actif' : 'En retard'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Aucune location récente</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }
