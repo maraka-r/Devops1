@@ -362,3 +362,286 @@ export interface UpcomingInvoices {
   total: number;
   totalAmount: number;
 }
+
+// ===========================
+// TYPES POUR DASHBOARD CLIENT
+// ===========================
+
+export interface ClientDashboardOverview {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    status: UserStatus;
+    role: UserRole;
+    memberSince: Date;
+  };
+  statistics: {
+    locations: {
+      total: number;
+      active: number;
+      completed: number;
+      upcoming: number;
+    };
+    spending: {
+      total: number;
+      thisMonth: number;
+      byMonth: Record<string, number>;
+    };
+    favorites: {
+      count: number;
+      available: number;
+    };
+  };
+  currentActivity: {
+    activeLocations: Array<{
+      id: string;
+      materiel: Materiel;
+      startDate: Date;
+      endDate: Date;
+      totalPrice: number;
+      status: LocationStatus;
+      daysRemaining: number;
+    }>;
+    upcomingLocations: Array<{
+      id: string;
+      materiel: Materiel;
+      startDate: Date;
+      endDate: Date;
+      totalPrice: number;
+      status: LocationStatus;
+      daysUntilStart: number;
+    }>;
+  };
+  favoriteMateriels: Materiel[];
+  alerts: Array<{
+    type: 'warning' | 'error' | 'info' | 'success';
+    title: string;
+    message: string;
+    count?: number;
+  }>;
+}
+
+export interface ClientDashboardStats {
+  user: {
+    id: string;
+    name: string;
+    memberSince: Date;
+    role: UserRole;
+  };
+  period: {
+    type: string;
+    startDate: Date;
+    endDate: Date;
+  };
+  summary: {
+    totalLocations: number;
+    completedLocations: number;
+    cancelledLocations: number;
+    totalSpent: number;
+    averageOrderValue: number;
+    averageLocationDuration: number;
+    uniqueMaterialsRented: number;
+    completionRate: number;
+    cancellationRate: number;
+  };
+  performance: {
+    vsAverageClient: {
+      locations: number;
+      spending: number;
+      locationsPercentage: number;
+      spendingPercentage: number;
+    };
+  };
+  breakdown: {
+    byType: Array<{
+      type: string;
+      count: number;
+      totalSpent: number;
+      percentage: number;
+      uniqueMaterials: number;
+    }>;
+    topMaterials: Array<{
+      material: string;
+      type: string;
+      count: number;
+      totalSpent: number;
+    }>;
+    monthlyTrends: Array<{
+      month: string;
+      locations: number;
+      spending: number;
+    }>;
+  };
+}
+
+export interface ClientSpendingAnalysis {
+  summary: {
+    totalSpent: number;
+    totalLocations: number;
+    totalRentalDays: number;
+    averageOrderValue: number;
+    averageDailySpending: number;
+  };
+  trends: {
+    isIncreasing: boolean;
+    growthRate: number;
+    projection: {
+      nextPeriod: number;
+      nextYear: number;
+    };
+    spendingByPeriod: Array<{
+      period: string;
+      amount: number;
+      locations: number;
+    }>;
+  };
+  breakdown: {
+    byType: Array<{
+      type: string;
+      totalSpent: number;
+      locationCount: number;
+      uniqueMaterials: number;
+      averageSpent: number;
+      percentage: number;
+    }>;
+    topMaterials: Array<{
+      id: string;
+      name: string;
+      type: string;
+      totalSpent: number;
+      locationCount: number;
+      averageSpent: number;
+      lastRented: Date;
+    }>;
+  };
+  comparison: {
+    vsAverageClient: {
+      totalSpending: number;
+      averageOrderValue: number;
+      spendingPercentage: number;
+      orderValuePercentage: number;
+    };
+  };
+  recommendations: Array<{
+    type: string;
+    title: string;
+    message: string;
+    potentialSavings?: number;
+  }>;
+}
+
+// ===========================
+// TYPES POUR LE CALENDRIER
+// ===========================
+
+// Type pour les événements du calendrier
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: Date;
+  endDate: Date;
+  type: 'location' | 'maintenance' | 'reservation' | 'holiday';
+  status: 'active' | 'completed' | 'cancelled';
+  materielId?: string;
+  userId?: string;
+  locationId?: string;
+  metadata?: {
+    materielName?: string;
+    userName?: string;
+    category?: string;
+    priority?: 'low' | 'medium' | 'high';
+    color?: string;
+  };
+}
+
+// Type pour les événements du calendrier (réponse API)
+export interface CalendarEventsResponse {
+  success: boolean;
+  data: {
+    events: CalendarEvent[];
+    summary: {
+      total: number;
+      byType: {
+        location: number;
+        maintenance: number;
+        reservation: number;
+        holiday: number;
+      };
+      byStatus: {
+        active: number;
+        completed: number;
+        cancelled: number;
+      };
+    };
+    period: {
+      start: Date;
+      end: Date;
+      monthName?: string;
+    };
+  };
+}
+
+// Type pour la disponibilité du matériel
+export interface MaterialAvailability {
+  date: Date;
+  status: 'available' | 'rented' | 'maintenance' | 'reserved';
+  events: CalendarEvent[];
+  timeSlots?: {
+    morning: 'available' | 'occupied';
+    afternoon: 'available' | 'occupied';
+    fullDay: 'available' | 'occupied';
+  };
+}
+
+// Type pour la disponibilité du matériel (réponse API)
+export interface MaterialAvailabilityResponse {
+  success: boolean;
+  data: {
+    materielId: string;
+    materielName: string;
+    category: string;
+    availability: MaterialAvailability[];
+    summary: {
+      totalDays: number;
+      availableDays: number;
+      rentedDays: number;
+      maintenanceDays: number;
+      reservedDays: number;
+      occupancyRate: number;
+    };
+    period: {
+      start: Date;
+      end: Date;
+    };
+    nextAvailableDate?: Date;
+    recommendations?: {
+      suggestedDates: Date[];
+      alternativeMaterials: string[];
+    };
+  };
+}
+
+// Type pour les filtres du calendrier
+export interface CalendarFilters {
+  userId?: string;
+  materielId?: string;
+  category?: string;
+  type?: CalendarEvent['type'];
+  status?: CalendarEvent['status'];
+  startDate?: Date;
+  endDate?: Date;
+  includeMaintenance?: boolean;
+  includeReservations?: boolean;
+}
+
+// Type pour les périodes du calendrier
+export interface CalendarPeriod {
+  year: number;
+  month: number;
+  monthName: string;
+  daysInMonth: number;
+  startDate: Date;
+  endDate: Date;
+}
