@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    if (!materiel.available) {
+    if (materiel.status !== 'AVAILABLE') {
       return NextResponse.json({
         success: false,
         error: 'Ce matériel n\'est pas disponible'

@@ -103,7 +103,7 @@ export async function PUT(
       );
     }
 
-    const { name, type, description, pricePerDay, available, specifications, images, manualUrl } = validation.data;
+    const { name, type, description, pricePerDay, status, specifications, images, manualUrl } = validation.data;
 
     // Préparer les données de mise à jour
     const updateData: Record<string, unknown> = {};
@@ -112,7 +112,7 @@ export async function PUT(
     if (type !== undefined) updateData.type = type;
     if (description !== undefined) updateData.description = description;
     if (pricePerDay !== undefined) updateData.pricePerDay = pricePerDay;
-    if (available !== undefined) updateData.available = available;
+    if (status !== undefined) updateData.status = status;
     if (specifications !== undefined) updateData.specifications = specifications;
     if (images !== undefined) updateData.images = images;
     if (manualUrl !== undefined) updateData.manualUrl = manualUrl;

@@ -9,12 +9,11 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const type = searchParams.get('type');
-    const available = searchParams.get('available');
+    const status = searchParams.get('status');
 
     const where: Record<string, unknown> = {};
     if (type) where.type = type;
-    if (available === 'true') where.available = true;
-    if (available === 'false') where.available = false;
+    if (status) where.status = status;
 
     const [materiels, total] = await Promise.all([
       prisma.materiel.findMany({
@@ -78,7 +77,7 @@ export async function POST(request: NextRequest) {
         type: validatedData.type,
         description: validatedData.description,
         pricePerDay: validatedData.pricePerDay,
-        available: validatedData.available,
+        status: validatedData.status,
         specifications: validatedData.specifications ? JSON.parse(JSON.stringify(validatedData.specifications)) : {},
         images: validatedData.images || []
       }

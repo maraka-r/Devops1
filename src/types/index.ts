@@ -9,8 +9,10 @@ import {
   Invoice,
   InvoiceItem,
   Payment,
-  UserRole, 
-  MaterielType, 
+  UserRole,
+  UserStatus,
+  MaterielType,
+  MaterielStatus, 
   LocationStatus,
   InvoiceStatus,
   PaymentMethod,
@@ -18,7 +20,7 @@ import {
 } from '@/generated/prisma';
 
 // Réexporter les types comme des valeurs (pour Zod)
-export { UserRole, MaterielType, LocationStatus, InvoiceStatus, PaymentMethod, PaymentStatus };
+export { UserRole, UserStatus, MaterielType, MaterielStatus, LocationStatus, InvoiceStatus, PaymentMethod, PaymentStatus };
 
 // Réexporter les types d'entités
 export type { User, Materiel, Location, Invoice, InvoiceItem, Payment };
@@ -181,7 +183,11 @@ export interface DashboardStats {
   totalLocations: number;
   activeLocations: number;
   monthlyRevenue: number;
-  availableMateriels: number;
+  materiels: {
+    available: number;
+    rented: number;
+    maintenance: number;
+  };
 }
 
 export interface RevenueByMonth {
@@ -201,7 +207,7 @@ export interface PopularMateriel {
 
 export interface MaterielFilters {
   type?: MaterielType;
-  available?: boolean;
+  status?: MaterielStatus;
   priceMin?: number;
   priceMax?: number;
   search?: string;

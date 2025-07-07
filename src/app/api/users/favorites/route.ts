@@ -41,7 +41,7 @@ const getUserFavoritesHandler = async (req: NextRequest): Promise<NextResponse> 
               type: true,
               description: true,
               pricePerDay: true,
-              available: true,
+              status: true,
               images: true,
               _count: {
                 select: {

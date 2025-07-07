@@ -22,7 +22,7 @@ export async function GET() {
         pricePerDay: true
       },
       where: {
-        available: true
+        status: 'AVAILABLE'
       }
     });
 

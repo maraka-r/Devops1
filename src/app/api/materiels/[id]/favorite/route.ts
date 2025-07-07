@@ -35,7 +35,7 @@ const addToFavoritesHandler = async (
       select: {
         id: true,
         name: true,
-        available: true
+        status: true
       }
     });
 
@@ -46,7 +46,7 @@ const addToFavoritesHandler = async (
       );
     }
 
-    if (!materiel.available) {
+    if (materiel.status !== 'AVAILABLE') {
       return NextResponse.json(
         { success: false, error: 'Ce matériel n\'est pas disponible' },
         { status: 400 }

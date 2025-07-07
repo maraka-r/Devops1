@@ -17,11 +17,12 @@ datasource db {
 // ===========================
 
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
+  id          String     @id @default(cuid())
+  email       String     @unique
   password    String
   name        String
-  role        UserRole @default(USER)
+  role        UserRole   @default(USER)
+  status      UserStatus @default(ACTIVE)
   
   // Informations profil
   phone       String?
@@ -29,8 +30,8 @@ model User {
   address     String?
   
   // Metadata
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   
   // Relations
   locations     Location[]
@@ -42,23 +43,23 @@ model User {
 }
 
 model Materiel {
-  id            String         @id @default(cuid())
+  id            String           @id @default(cuid())
   name          String
   type          MaterielType
   description   String?
-  pricePerDay   Decimal        @db.Decimal(10, 2)
-  available     Boolean        @default(true)
+  pricePerDay   Decimal          @db.Decimal(10, 2)
+  status        MaterielStatus   @default(AVAILABLE)
   
   // Spécifications techniques (JSON)
   specifications Json?
   
   // Images et documentation
-  images        String[]       @default([])
+  images        String[]         @default([])
   manualUrl     String?
   
   // Metadata
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
   
   // Relations
   locations     Location[]
@@ -217,6 +218,14 @@ enum UserRole {
   ADMIN
 }
 
+enum UserStatus {
+  ACTIVE     // Compte actif
+  INACTIVE   // Compte inactif
+  SUSPENDED  // Compte suspendu
+  PENDING    // En attente de validation
+  BANNED     // Compte banni
+}
+
 enum MaterielType {
   GRUE_MOBILE
   GRUE_TOUR
@@ -227,6 +236,14 @@ enum MaterielType {
   COMPACTEUR
   PELLETEUSE
   AUTRE
+}
+
+enum MaterielStatus {
+  AVAILABLE     // Disponible à la location
+  RENTED        // En cours de location
+  MAINTENANCE   // En maintenance
+  OUT_OF_ORDER  // Hors service
+  RETIRED       // Retiré du service
 }
 
 enum LocationStatus {

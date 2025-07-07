@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     // Construction des filtres
     const where: Record<string, unknown> = {
-      available: true // Seulement les matériels disponibles
+      status: 'AVAILABLE' // Seulement les matériels disponibles
     };
 
     if (type) where.type = type;

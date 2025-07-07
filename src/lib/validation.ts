@@ -2,7 +2,7 @@
 // Validation des données d'entrée pour les API et formulaires
 
 import { z } from 'zod';
-import { UserRole, MaterielType, LocationStatus, InvoiceStatus, PaymentMethod, PaymentStatus } from '@/types';
+import { UserRole, UserStatus, MaterielType, MaterielStatus, LocationStatus, InvoiceStatus, PaymentMethod, PaymentStatus } from '@/types';
 
 // ===========================
 // SCHÉMAS DE BASE
@@ -71,6 +71,7 @@ export const createUserSchema = z.object({
   password: passwordSchema,
   name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
   role: z.nativeEnum(UserRole).default(UserRole.USER),
+  status: z.nativeEnum(UserStatus).default(UserStatus.ACTIVE),
   phone: phoneSchema,
   company: z.string().optional(),
   address: z.string().optional(),
@@ -80,6 +81,7 @@ export const updateUserSchema = z.object({
   email: emailSchema.optional(),
   name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères').optional(),
   role: z.nativeEnum(UserRole).optional(),
+  status: z.nativeEnum(UserStatus).optional(),
   phone: phoneSchema,
   company: z.string().optional(),
   address: z.string().optional(),
@@ -91,6 +93,7 @@ export const updateUserAdminSchema = z.object({
   password: passwordSchema.optional(),
   name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères').optional(),
   role: z.nativeEnum(UserRole).optional(),
+  status: z.nativeEnum(UserStatus).optional(),
   phone: phoneSchema,
   company: z.string().optional(),
   address: z.string().optional(),
@@ -134,7 +137,7 @@ export const createMaterielSchema = z.object({
   type: z.nativeEnum(MaterielType),
   description: z.string().optional(),
   pricePerDay: priceSchema,
-  available: z.boolean().default(true),
+  status: z.nativeEnum(MaterielStatus).default(MaterielStatus.AVAILABLE),
   specifications: z.record(z.unknown()).optional(),
   images: z.array(z.string().url()).default([]),
   manualUrl: z.string().url().optional(),
@@ -145,7 +148,7 @@ export const updateMaterielSchema = z.object({
   type: z.nativeEnum(MaterielType).optional(),
   description: z.string().optional(),
   pricePerDay: priceSchema.optional(),
-  available: z.boolean().optional(),
+  status: z.nativeEnum(MaterielStatus).optional(),
   specifications: z.record(z.unknown()).optional(),
   images: z.array(z.string().url()).optional(),
   manualUrl: z.string().url().optional(),
@@ -218,7 +221,7 @@ export const paginationSchema = z.object({
 
 export const materielFiltersSchema = z.object({
   type: z.nativeEnum(MaterielType).optional(),
-  available: z.boolean().optional(),
+  status: z.nativeEnum(MaterielStatus).optional(),
   priceMin: z.number().positive().optional(),
   priceMax: z.number().positive().optional(),
   search: z.string().optional(),
