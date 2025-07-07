@@ -38,6 +38,11 @@ model User {
   favoris       Favori[]
   invoices      Invoice[]
   payments      Payment[]
+  notifications  Notification[]
+  supportTickets SupportTicket[]
+  supportReplies SupportReply[]
+  assignedTickets SupportTicket[] @relation("SupportTicketAssignee")
+  settings      UserSettings?
   
   @@map("users")
 }
@@ -209,6 +214,167 @@ model Payment {
   @@map("payments")
 }
 
+model Notification {
+  id          String            @id @default(cuid())
+  
+  // Relations
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Contenu de la notification
+  type        NotificationType
+  title       String
+  message     String
+  data        Json?             // Données additionnelles (liens, IDs, etc.)
+  
+  // État de la notification
+  isRead      Boolean           @default(false)
+  priority    NotificationPriority @default(NORMAL)
+  
+  // Dates
+  createdAt   DateTime          @default(now())
+  readAt      DateTime?
+  
+  @@map("notifications")
+}
+
+model SupportTicket {
+  id          String            @id @default(cuid())
+  
+  // Relations
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Contenu du ticket
+  title       String
+  description String
+  category    SupportCategory
+  priority    SupportPriority   @default(NORMAL)
+  status      SupportStatus     @default(OPEN)
+  
+  // Métadonnées
+  assignedToId String?
+  assignedTo   User?            @relation("SupportTicketAssignee", fields: [assignedToId], references: [id])
+  
+  // Dates
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  closedAt    DateTime?
+  
+  // Relations
+  replies     SupportReply[]
+  
+  @@map("support_tickets")
+}
+
+model SupportReply {
+  id          String        @id @default(cuid())
+  
+  // Relations
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Contenu de la réponse
+  message     String
+  isInternal  Boolean       @default(false)  // Réponse interne (équipe support)
+  
+  // Pièces jointes
+  attachments Json?         // URLs des fichiers joints
+  
+  // Dates
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  @@map("support_replies")
+}
+
+model CompanySettings {
+  id            String    @id @default(cuid())
+  
+  // Informations entreprise
+  companyName   String
+  email         String?
+  phone         String?
+  address       String?
+  website       String?
+  logo          String?   // URL du logo
+  
+  // Configuration métier
+  taxRate       Float     @default(0.20)  // Taux de TVA (20% par défaut)
+  currency      String    @default("EUR") // Devise
+  timezone      String    @default("Europe/Paris") // Fuseau horaire
+  language      String    @default("fr")  // Langue par défaut
+  
+  // Paramètres de location
+  defaultRentalDuration  Int  @default(1)    // Durée par défaut en jours
+  minRentalDuration      Int  @default(1)    // Durée minimum
+  maxRentalDuration      Int  @default(365)  // Durée maximum
+  
+  // Notifications
+  emailNotifications     Boolean @default(true)  // Notifications par email
+  smsNotifications       Boolean @default(false) // Notifications par SMS
+  
+  // Maintenance
+  maintenanceMode        Boolean @default(false) // Mode maintenance
+  maintenanceMessage     String? // Message de maintenance
+  
+  // Dates
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@map("company_settings")
+}
+
+model UserSettings {
+  id            String    @id @default(cuid())
+  
+  // Relations
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Préférences d'affichage
+  theme         String    @default("light")      // light, dark, auto
+  language      String    @default("fr")         // Langue préférée
+  timezone      String    @default("Europe/Paris") // Fuseau horaire
+  dateFormat    String    @default("DD/MM/YYYY") // Format de date
+  currency      String    @default("EUR")        // Devise préférée
+  
+  // Notifications
+  emailNotifications        Boolean @default(true)  // Notifications par email
+  pushNotifications         Boolean @default(true)  // Notifications push
+  smsNotifications          Boolean @default(false) // Notifications par SMS
+  notificationSound         Boolean @default(true)  // Sons de notification
+  
+  // Notifications spécifiques
+  locationReminders         Boolean @default(true)  // Rappels de location
+  paymentReminders          Boolean @default(true)  // Rappels de paiement
+  materialAvailability      Boolean @default(true)  // Dispo matériel
+  promotionalEmails         Boolean @default(false) // Emails promotionnels
+  
+  // Préférences métier
+  defaultLocationDuration   Int     @default(1)     // Durée par défaut
+  autoRenewal              Boolean @default(false)  // Renouvellement auto
+  favoriteViewFirst        Boolean @default(true)   // Favoris en premier
+  
+  // Dashboard
+  dashboardLayout          String  @default("default") // Layout du dashboard
+  compactMode              Boolean @default(false)     // Mode compact
+  showTutorials            Boolean @default(true)      // Afficher tutoriels
+  
+  // Sécurité
+  twoFactorEnabled         Boolean @default(false)     // 2FA activé
+  sessionTimeout           Int     @default(30)        // Timeout session (minutes)
+  
+  // Dates
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@map("user_settings")
+}
+
 // ===========================
 // ENUMS
 // ===========================
@@ -277,4 +443,52 @@ enum PaymentStatus {
   COMPLETED  // Terminé
   FAILED     // Échoué
   CANCELLED  // Annulé
+}
+
+enum NotificationType {
+  LOCATION_CONFIRMED    // Location confirmée
+  LOCATION_REMINDER     // Rappel de location
+  LOCATION_OVERDUE      // Location en retard
+  LOCATION_COMPLETED    // Location terminée
+  PAYMENT_DUE           // Paiement à effectuer
+  PAYMENT_RECEIVED      // Paiement reçu
+  PAYMENT_OVERDUE       // Paiement en retard
+  MATERIEL_AVAILABLE    // Matériel disponible
+  MATERIEL_MAINTENANCE  // Maintenance programmée
+  SYSTEM_ANNOUNCEMENT   // Annonce système
+  ACCOUNT_UPDATE        // Mise à jour du compte
+  SECURITY_ALERT        // Alerte de sécurité
+}
+
+enum NotificationPriority {
+  LOW     // Basse priorité
+  NORMAL  // Priorité normale
+  HIGH    // Haute priorité
+  URGENT  // Urgente
+}
+
+enum SupportCategory {
+  ACCOUNT           // Problème de compte
+  MATERIEL          // Problème avec le matériel
+  LOCATION          // Problème avec une location
+  PAYMENT           // Problème de paiement
+  TECHNICAL         // Problème technique
+  FEATURE_REQUEST   // Demande de fonctionnalité
+  BUG_REPORT        // Rapport de bug
+  OTHER             // Autre
+}
+
+enum SupportPriority {
+  LOW     // Basse priorité
+  NORMAL  // Priorité normale
+  HIGH    // Haute priorité
+  URGENT  // Urgente
+}
+
+enum SupportStatus {
+  OPEN        // Ouvert
+  IN_PROGRESS // En cours de traitement
+  PENDING     // En attente (client)
+  RESOLVED    // Résolu
+  CLOSED      // Fermé
 }
