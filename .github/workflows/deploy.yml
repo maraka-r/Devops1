@@ -72,7 +72,7 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Build app (for Next.js or similar)
+      - name: Build app
         run: npm run build
 
       - name: Build Docker image
@@ -99,7 +99,7 @@ jobs:
 
       - name: Deploy on EC2
         run: |
-          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << EOF
             set -e
 
             # Créer répertoire app si nécessaire
@@ -112,7 +112,11 @@ jobs:
             mv ~/docker-compose.yml ~/app/
             mv ~/prometheus.yml ~/app/
             mv ~/alertmanager.yml ~/app/
-            mv -f ~/grafana ~/app/
+            
+            # Supprimer et remplacer le répertoire grafana
+            rm -rf ~/app/grafana
+            mv ~/grafana ~/app/
+            
             mv ~/image.tar.gz ~/app/
 
             cd ~/app
@@ -131,24 +135,15 @@ jobs:
             docker image prune -f
 
             # Nettoyage post-déploiement
-
             echo "Nettoyage des fichiers temporaires..."
             rm -f ~/deploy.tar.gz
             rm -rf ~/deploy
 
             echo "Nettoyage des images Docker non utilisées..."
-            if [ "$USE_SUDO" = true ]; then
-              sudo docker image prune -af --filter "until=24h"
-            else
-              docker image prune -af --filter "until=24h"
-            fi
+            docker image prune -af --filter "until=24h"
 
             echo "Nettoyage des volumes Docker non utilisés..."
-            if [ "$USE_SUDO" = true ]; then
-              sudo docker volume prune -f
-            else
-              docker volume prune -f
-            fi
+            docker volume prune -f
 
             echo "Nettoyage terminé."
-            EOF
+          EOF
