@@ -34,7 +34,7 @@ export function ProtectedRoute({
 
     if (!isAuthenticated) {
       const currentPath = window.location.pathname;
-      router.push(`/login?from=${encodeURIComponent(currentPath)}`);
+      router.push(`/auth/login?from=${encodeURIComponent(currentPath)}`);
       return;
     }
 

@@ -7,10 +7,10 @@ import { verifyToken } from '@/lib/jwt';
 
 // Routes publiques qui ne nécessitent pas d'authentification
 const publicRoutes = [
-  '/login',
-  '/register',
-  '/forgot-password',
-  '/reset-password',
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/reset-password',
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/forgot-password',
@@ -79,7 +79,7 @@ export function middleware(request: NextRequest) {
     // Rediriger vers la page de connexion pour les pages web
     if (!pathname.startsWith('/api/')) {
       const url = request.nextUrl.clone();
-      url.pathname = '/login';
+      url.pathname = '/auth/login';
       url.searchParams.set('from', pathname);
       return NextResponse.redirect(url);
     }
@@ -136,7 +136,7 @@ export function middleware(request: NextRequest) {
     // Rediriger vers la page de connexion pour les pages web
     if (!pathname.startsWith('/api/')) {
       const url = request.nextUrl.clone();
-      url.pathname = '/login';
+      url.pathname = '/auth/login';
       url.searchParams.set('from', pathname);
       url.searchParams.set('error', 'session_expired');
       return NextResponse.redirect(url);

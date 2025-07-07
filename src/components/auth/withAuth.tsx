@@ -43,7 +43,7 @@ export function withAuth<P extends object>(
   const {
     requireAuth = true,
     requiredRole,
-    redirectTo = '/login',
+    redirectTo = '/auth/login',
     fallback: LoadingComponent = DefaultLoadingComponent
   } = options;
 

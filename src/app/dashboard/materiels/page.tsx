@@ -31,7 +31,7 @@ import {
 import { useMaterials } from '@/hooks/api/useMaterials';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { formatCurrency } from '@/lib/utils';
-import { Materiel, MaterielStatus, MaterielType } from '@/types';
+import { Materiel, MaterielStatus } from '@/types';
 
 const statusColors = {
   AVAILABLE: 'default',
@@ -326,5 +326,13 @@ function MaterielsContent() {
         </Card>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function MaterielsPage() {
+  return (
+    <ProtectedRoute>
+      <MaterielsContent />
+    </ProtectedRoute>
   );
 }
