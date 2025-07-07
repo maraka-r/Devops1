@@ -7,10 +7,12 @@ import { verifyToken } from '@/lib/jwt';
 
 // Routes publiques qui ne nécessitent pas d'authentification
 const publicRoutes = [
+  '/',
   '/auth/login',
   '/auth/register',
   '/auth/forgot-password',
   '/auth/reset-password',
+  '/auth-test',  // Page de test d'authentification
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/forgot-password',
@@ -20,7 +22,10 @@ const publicRoutes = [
   '/_next',
   '/favicon.ico',
   '/robots.txt',
-  '/sitemap.xml'
+  '/sitemap.xml',
+  '/about',
+  '/contact',
+  '/test-styles'
 ];
 
 // Routes API qui nécessitent une authentification

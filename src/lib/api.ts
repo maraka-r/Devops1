@@ -175,7 +175,11 @@ class ApiService {
   // Méthodes utilitaires pour l'authentification
   setAuthToken(token: string): void {
     if (typeof window !== 'undefined') {
+      // Stocker dans localStorage pour l'accès côté client
       localStorage.setItem('auth_token', token);
+      
+      // Stocker dans un cookie pour l'accès côté serveur (middleware)
+      document.cookie = `token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
     }
   }
 
@@ -189,6 +193,8 @@ class ApiService {
   removeAuthToken(): void {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
+      // Supprimer le cookie en définissant une date d'expiration passée
+      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
   }
 

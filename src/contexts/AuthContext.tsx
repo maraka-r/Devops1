@@ -133,8 +133,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Mettre à jour l'utilisateur
         setUser(userData);
         
-        // Rediriger vers le dashboard
-        router.push('/dashboard');
+        // Pas de redirection automatique - laissons la page de login gérer cela
       } else {
         throw new ApiError(response.error || 'Erreur de connexion', 400);
       }
