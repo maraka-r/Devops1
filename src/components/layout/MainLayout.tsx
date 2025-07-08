@@ -1,6 +1,6 @@
 'use client';
 
-import { Header } from '@/components/layout/Header';
+import { PublicHeader } from '@/components/layout/PublicHeader';
 import Footer from '@/components/layout/Footer';
 
 interface MainLayoutProps {
@@ -14,11 +14,11 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header principal */}
-      <Header />
+      {/* Header principal fusionné */}
+      <PublicHeader />
       
-      {/* Contenu principal avec padding-top pour compenser le header fixe */}
-      <main className="pt-16 flex-1">
+      {/* Contenu principal */}
+      <main className="flex-1">
         {children}
       </main>
       
