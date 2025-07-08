@@ -189,7 +189,7 @@ export function HeroSection() {
               </Button>
             </Link>
             
-            <Link href="/services/location-niger">
+            <Link href="/materiels">
               <Button 
                 variant="outline" 
                 size="xl" 

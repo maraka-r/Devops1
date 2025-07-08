@@ -64,7 +64,6 @@ export default function MaterielsPage() {
   useEffect(() => {
     const initialLoad = async () => {
       const filters: MaterialSearchFilters = {
-        status: 'AVAILABLE',
         page: 1,
         limit: 12,
       };
@@ -81,7 +80,6 @@ export default function MaterielsPage() {
       query: searchTerm || undefined,
       type: (selectedType !== 'ALL' ? selectedType as MaterielType : undefined),
       sortBy: sortBy || undefined,
-      status: 'AVAILABLE', // Afficher seulement les matériels disponibles
       page: 1,
       limit: 12,
     };
@@ -106,14 +104,14 @@ export default function MaterielsPage() {
     setSelectedType('ALL');
     setSortBy('name_asc');
     setCurrentFilters({});
-    fetchMaterials({ status: 'AVAILABLE', page: 1, limit: 12 });
+    fetchMaterials({ page: 1, limit: 12 });
   };
 
   // Fonction pour formater le statut
   const getStatusBadge = (status: string) => {
     const statusMap = {
       AVAILABLE: { label: 'Disponible', variant: 'default' as const },
-      RENTED: { label: 'Loué', variant: 'secondary' as const },
+      RENTED: { label: 'À réserver', variant: 'secondary' as const },
       MAINTENANCE: { label: 'Maintenance', variant: 'destructive' as const },
       OUT_OF_ORDER: { label: 'Hors service', variant: 'destructive' as const },
     };
@@ -127,6 +125,8 @@ export default function MaterielsPage() {
       </Badge>
     );
   };
+
+  // Les fonctions de calcul de disponibilité ont été supprimées car elles ne sont plus utilisées
 
   // Composant pour une carte de matériel
   const MaterialCard = ({ material }: { material: Materiel }) => (
@@ -174,10 +174,12 @@ export default function MaterielsPage() {
               </Badge>
             </div>
           )}
+
+          {/* Affichage de la disponibilité supprimé */}
         </div>
       </CardContent>
       
-      <CardFooter className="p-4 pt-0">
+      <CardFooter className="p-4">
         <div className="flex gap-2 w-full">
           <Button asChild variant="outline" className="flex-1">
             <Link href={`/materiels/${material.id}`}>
@@ -186,11 +188,15 @@ export default function MaterielsPage() {
             </Link>
           </Button>
           
-          {material.status === 'AVAILABLE' && (
-            <Button asChild className="flex-1">
+          {(material.status === 'AVAILABLE' || material.status === 'RENTED') && (
+            <Button 
+              asChild 
+              className="flex-1" 
+              variant={material.status === 'RENTED' ? "default" : "default"}
+            >
               <Link href={`/materiels/${material.id}/louer`}>
                 <Calendar className="h-4 w-4 mr-2" />
-                Louer
+                {material.status === 'AVAILABLE' ? 'Louer' : 'Réserver'}
               </Link>
             </Button>
           )}
@@ -203,7 +209,7 @@ export default function MaterielsPage() {
     <PublicLayout>
       <div className="min-h-screen bg-gray-50">
         {/* Header de la page */}
-        <div className="bg-white shadow-sm border-b">
+        {/* <div className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="text-center">
               <h1 className="text-3xl font-bold text-gray-900 mb-4">
@@ -215,7 +221,7 @@ export default function MaterielsPage() {
               </p>
             </div>
           </div>
-        </div>
+        </div> */}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Barre de recherche et filtres */}
@@ -315,9 +321,11 @@ export default function MaterielsPage() {
         ) : materials.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
-              {materials.map((material) => (
-                <MaterialCard key={material.id} material={material} />
-              ))}
+              {materials
+                .filter(material => material.status !== 'MAINTENANCE' && material.status !== 'OUT_OF_ORDER')
+                .map((material) => (
+                  <MaterialCard key={material.id} material={material} />
+                ))}
             </div>
 
             {/* Bouton charger plus */}

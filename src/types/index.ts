@@ -196,18 +196,69 @@ export interface DashboardStats {
     available: number;
     rented: number;
     maintenance: number;
+    outOfOrder: number;
+  };
+  locations: {
+    pending: number;
+    active: number;
+    completed: number;
+    cancelled: number;
+  };
+  revenue: {
+    today: number;
+    thisWeek: number;
+    thisMonth: number;
+    lastMonth: number;
+    growth: number;
   };
 }
 
-export interface RevenueByMonth {
-  month: string;
-  revenue: number;
+export interface DashboardAlerts {
+  overdueRentals: number;
+  upcomingDeadlines: number;
+  maintenanceNeeded: number;
+  lowStock: number;
+  paymentOverdue: number;
+  documentsExpiring: number;
 }
 
-export interface PopularMateriel {
-  materiel: Materiel;
-  locationCount: number;
-  totalRevenue: number;
+export interface DashboardRecentActivity {
+  locations: LocationWithDetails[];
+  newClients: number;
+  completedLocations: number;
+  recentPayments: Array<{
+    id: string;
+    amount: number;
+    client: string;
+    date: string;
+    status: PaymentStatus;
+  }>;
+  recentMaintenance: Array<{
+    id: string;
+    materielName: string;
+    type: string;
+    date: string;
+    status: string;
+  }>;
+}
+
+export interface DashboardChartData {
+  revenue: Array<{
+    date: string;
+    amount: number;
+    period: 'day' | 'week' | 'month';
+  }>;
+  locations: Array<{
+    date: string;
+    count: number;
+    status: LocationStatus;
+  }>;
+  materials: Array<{
+    type: MaterielType;
+    available: number;
+    rented: number;
+    maintenance: number;
+  }>;
 }
 
 // ===========================

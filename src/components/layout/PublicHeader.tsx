@@ -57,7 +57,7 @@ const navigationItems: (NavItem | DropdownNavItem)[] = [
       },
       {
         label: 'Location Niger',
-        href: '/services/location-niger',
+        href: '/materiels',
         description: 'Location de matériel BTP'
       },
       {
