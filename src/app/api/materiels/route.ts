@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandler, withMethodValidation, withAuth } from '@/lib/middleware';
+import { compose } from '@/lib/middleware';
 import prisma from '@/lib/db';
 import { createMaterielSchema } from '@/lib/validation';
 
 // GET /api/materiels - Récupérer tous les matériels
-export async function GET(request: NextRequest) {
+const getMaterielsHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '20');
     const type = searchParams.get('type');
     const status = searchParams.get('status');
 
@@ -36,13 +38,16 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: materiels,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
+      data: {
+        data: materiels,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      },
+      message: 'Matériels récupérés avec succès'
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des matériels:', error);
@@ -51,23 +56,11 @@ export async function GET(request: NextRequest) {
       error: 'Erreur lors de la récupération des matériels'
     }, { status: 500 });
   }
-}
+};
 
-// POST /api/materiels - Créer un nouveau matériel
-export async function POST(request: NextRequest) {
+// POST /api/materiels - Créer un nouveau matériel  
+const createMaterielHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
-    // Vérifier l'authentification et les permissions admin
-    // TODO: Implémenter la vérification d'authentification
-    const isAuthenticated = true; // Placeholder
-    const isAdmin = true; // Placeholder
-    
-    if (!isAuthenticated || !isAdmin) {
-      return NextResponse.json({
-        success: false,
-        error: 'Accès non autorisé'
-      }, { status: 403 });
-    }
-
     const body = await request.json();
     const validatedData = createMaterielSchema.parse(body);
 
@@ -85,7 +78,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: materiel
+      data: materiel,
+      message: 'Matériel créé avec succès'
     }, { status: 201 });
   } catch (error) {
     console.error('Erreur lors de la création du matériel:', error);
@@ -94,4 +88,19 @@ export async function POST(request: NextRequest) {
       error: 'Erreur lors de la création du matériel'
     }, { status: 500 });
   }
-}
+};
+
+// Appliquer les middlewares
+const getHandler = compose(
+  withErrorHandler,
+  (handler) => withMethodValidation(['GET'], handler),
+  withAuth
+)(getMaterielsHandler);
+
+const postHandler = compose(
+  withErrorHandler,
+  (handler) => withMethodValidation(['POST'], handler),
+  withAuth
+)(createMaterielHandler);
+
+export { getHandler as GET, postHandler as POST };
