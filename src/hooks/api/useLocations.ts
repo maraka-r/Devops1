@@ -45,7 +45,7 @@ interface UseLocationsReturn {
   // Actions spécifiques
   getActiveLocations: () => Promise<void>;
   getUpcomingLocations: () => Promise<void>;
-  getLocationsByMaterial: (materielId: string) => Promise<void>;
+  getLocationsByMaterial: (materielId: string) => Promise<Location[]>;
   getLocationsByUser: (userId: string) => Promise<void>;
   
   // Utilitaires
@@ -145,14 +145,23 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRet
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.post<Location>('/locations', data);
-      
-      if (response.success && response.data) {
-        // Ajouter la nouvelle location à la liste
-        setLocations(prev => [response.data!, ...prev]);
-        return response.data;
-      } else {
-        throw new ApiError(response.error || 'Erreur lors de la création', 400);
+      try {
+        const response = await apiService.post<Location>('/locations', data);
+        
+        if (response.success && response.data) {
+          // Ajouter la nouvelle location à la liste
+          setLocations(prev => [response.data!, ...prev]);
+          return response.data;
+        } else {
+          throw new ApiError(response.error || 'Erreur lors de la création', 400);
+        }
+      } catch (apiError) {
+        // Si l'endpoint n'existe pas encore (404), générer une erreur claire
+        if (apiError instanceof ApiError && apiError.status === 404) {
+          console.warn('Endpoint pour la création de location non implémenté');
+          throw new ApiError('Le service de réservation n\'est pas encore disponible', 404);
+        }
+        throw apiError;
       }
     } catch (err) {
       const errorMessage = err instanceof ApiError ? err.message : 'Erreur lors de la création de la location';
@@ -300,20 +309,37 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRet
   }, []);
 
   // Fonction pour récupérer les locations par matériel
-  const getLocationsByMaterial = useCallback(async (materielId: string): Promise<void> => {
+  const getLocationsByMaterial = useCallback(async (materielId: string): Promise<Location[]> => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.get<Location[]>(`/locations/by-material/${materielId}`);
-      
-      if (response.success && response.data) {
-        setLocations(response.data);
-        setTotalCount(response.data.length);
+      try {
+        const response = await apiService.get<Location[]>(`/locations/by-material/${materielId}`);
+        
+        if (response.success && response.data) {
+          setLocations(response.data);
+          setTotalCount(response.data.length);
+          return response.data;
+        }
+        return [];
+      } catch (apiError) {
+        // Si l'endpoint n'existe pas encore (404), ne pas afficher d'erreur
+        // mais retourner un tableau vide silencieusement
+        if (apiError instanceof ApiError && apiError.status === 404) {
+          console.warn('Endpoint pour les locations par matériel non implémenté');
+          return [];
+        }
+        throw apiError;
       }
     } catch (err) {
       const errorMessage = err instanceof ApiError ? err.message : 'Erreur lors du chargement des locations du matériel';
-      setError(errorMessage);
+      console.error('Erreur getLocationsByMaterial:', errorMessage);
+      // Ne pas définir d'erreur visible si l'endpoint n'existe pas encore
+      if (!(err instanceof ApiError && err.status === 404)) {
+        setError(errorMessage);
+      }
+      return [];
     } finally {
       setIsLoading(false);
     }

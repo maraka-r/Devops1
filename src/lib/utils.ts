@@ -6,6 +6,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Format a price in euros
+ */
+export function formatPrice(price: string | number): string {
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(numPrice);
+}
+
+/**
  * Handle Prisma errors and return appropriate HTTP responses
  */
 export function handlePrismaError(

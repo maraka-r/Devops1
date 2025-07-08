@@ -71,34 +71,62 @@ class ApiService {
 
   // Méthode privée pour traiter la réponse
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
+    // Vérifier si la réponse est OK
+    if (!response.ok) {
+      // Traitement spécial pour les erreurs 404
+      if (response.status === 404) {
+        // Pour les 404, on utilise un message plus clair sans afficher le HTML
+        throw new ApiError(
+          "La ressource demandée n'est pas disponible",
+          404,
+          "NOT_FOUND"
+        );
+      }
+      
+      // Pour les autres erreurs, essayer d'abord de parser comme JSON
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new ApiError(
+            errorData.error || errorData.message || `HTTP Error ${response.status}`,
+            response.status,
+            errorData.code || `HTTP_${response.status}`
+          );
+        } else {
+          // Si ce n'est pas du JSON, créer une erreur générique basée sur le code HTTP
+          // sans inclure le contenu HTML ou texte qui pourrait être trop verbeux
+          throw new ApiError(
+            `Erreur ${response.status}: ${response.statusText || 'Erreur serveur'}`,
+            response.status,
+            `HTTP_${response.status}`
+          );
+        }
+      } catch (err) {
+        // Si l'erreur est déjà un ApiError, la propager
+        if (err instanceof ApiError) {
+          throw err;
+        }
+        
+        // Sinon créer une nouvelle erreur générique
+        throw new ApiError(
+          `HTTP Error ${response.status}`,
+          response.status,
+          `HTTP_${response.status}`
+        );
+      }
+    }
+
+    // Traiter les réponses réussies
     const contentType = response.headers.get('content-type');
     
     // Vérifier si la réponse est en JSON
     if (contentType && contentType.includes('application/json')) {
       const data: ApiResponse<T> = await response.json();
-      
-      // Si la réponse n'est pas OK, lancer une erreur
-      if (!response.ok) {
-        throw new ApiError(
-          data.error || `HTTP Error ${response.status}`,
-          response.status,
-          data.error
-        );
-      }
-      
       return data;
     } else {
-      // Réponse non-JSON
+      // Pour les réponses non-JSON mais OK (204 No Content, etc.)
       const text = await response.text();
-      
-      if (!response.ok) {
-        throw new ApiError(
-          `HTTP Error ${response.status}: ${text}`,
-          response.status
-        );
-      }
-      
-      // Retourner une réponse formatée pour les réponses non-JSON
       return {
         success: true,
         data: text as unknown as T,

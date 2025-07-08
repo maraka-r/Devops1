@@ -196,7 +196,7 @@ export function EntitiesSection() {
 
               {/* CTA */}
               <div className="pt-4">
-                <Link href="/services/location-niger">
+                <Link href="/materiels">
                   <Button variant="secondary" className="w-full gap-2">
                     Voir le catalogue
                     <ArrowRight className="h-4 w-4" />
