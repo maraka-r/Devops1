@@ -96,7 +96,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <meta name="msapplication-TileColor" content="#ea580c" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
       </head>
-      <body className="font-inter antialiased bg-background text-foreground">
+      <body 
+        className="font-inter antialiased bg-background text-foreground"
+        suppressHydrationWarning={true}
+      >
         <AuthProvider>
           <div id="root" className="min-h-screen">
             {children}

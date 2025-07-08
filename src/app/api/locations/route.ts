@@ -24,18 +24,18 @@ export async function GET(request: NextRequest) {
           user: {
             select: {
               id: true,
+              email: true,
               name: true,
-              email: true
+              role: true,
+              status: true,
+              phone: true,
+              company: true,
+              address: true,
+              createdAt: true,
+              updatedAt: true
             }
           },
-          materiel: {
-            select: {
-              id: true,
-              name: true,
-              type: true,
-              pricePerDay: true
-            }
-          }
+          materiel: true  // Inclure tous les champs du matériel
         },
         orderBy: {
           createdAt: 'desc'
@@ -46,12 +46,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: locations,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
+      data: {
+        data: locations,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
       }
     });
   } catch (error) {

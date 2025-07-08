@@ -99,7 +99,7 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRet
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.get<PaginatedResponse<LocationWithDetails>>('/locations/details', {
+      const response = await apiService.get<PaginatedResponse<LocationWithDetails>>('/locations', {
         params: filters as Record<string, string | number | boolean>
       });
       

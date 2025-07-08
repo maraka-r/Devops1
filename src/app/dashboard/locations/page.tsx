@@ -72,10 +72,11 @@ function LocationsContent() {
   }, [fetchLocationsWithDetails]);
 
   // Filtrage des locations
-  const filteredLocations = locationsWithDetails.filter(location => {
-    const matchesSearch = location.materiel.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         location.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         location.materiel.id.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredLocations = (locationsWithDetails || []).filter(location => {
+    if (!location || !location.materiel || !location.user) return false;
+    const matchesSearch = location.materiel.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         location.user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         location.materiel.id?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || location.status === statusFilter;
     return matchesSearch && matchesStatus;
   });

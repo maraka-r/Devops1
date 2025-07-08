@@ -82,8 +82,9 @@ function MaterielsContent() {
   }, [fetchMaterials]);
 
   // Filtrage des matériels
-  const filteredMaterials = materials.filter(materiel => {
-    const matchesSearch = materiel.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredMaterials = (materials || []).filter((materiel) => {
+    if (!materiel) return false;
+    const matchesSearch = materiel.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
     const matchesStatus = statusFilter === 'all' || materiel.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
