@@ -102,7 +102,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.get<PaginatedResponse<Omit<User, 'password'>>>('/clients', {
+      const response = await apiService.get<PaginatedResponse<Omit<User, 'password'>>>('/users', {
         params: filters as Record<string, string | number | boolean>
       });
       
@@ -148,7 +148,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.post<Omit<User, 'password'>>('/clients', data);
+      const response = await apiService.post<Omit<User, 'password'>>('/users', data);
       
       if (response.success && response.data) {
         // Ajouter le nouveau client à la liste
@@ -172,7 +172,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.put<Omit<User, 'password'>>(`/clients/${id}`, data);
+      const response = await apiService.put<Omit<User, 'password'>>(`/users/${id}`, data);
       
       if (response.success && response.data) {
         // Mettre à jour le client dans la liste
@@ -200,7 +200,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.delete(`/clients/${id}`);
+      const response = await apiService.delete(`/users/${id}`);
       
       if (response.success) {
         // Retirer le client de la liste
