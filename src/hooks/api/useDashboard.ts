@@ -5,22 +5,9 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { apiService, ApiError } from '@/lib/api';
-import { DashboardStats, LocationWithDetails } from '@/types';
+import { DashboardStats, DashboardAlerts, DashboardRecentActivity } from '@/types';
 
-// Types pour les données du dashboard
-interface DashboardAlerts {
-  overdueRentals: number;
-  upcomingDeadlines: number;
-  maintenanceNeeded: number;
-  lowStock: number;
-}
-
-interface RecentActivity {
-  locations: LocationWithDetails[];
-  newClients: number;
-  completedLocations: number;
-}
-
+// Types pour les options du hook
 interface UseDashboardOptions {
   autoRefresh?: boolean;
   refreshInterval?: number;
@@ -30,7 +17,7 @@ interface UseDashboardReturn {
   // État
   stats: DashboardStats | null;
   alerts: DashboardAlerts | null;
-  recentActivity: RecentActivity | null;
+  recentActivity: DashboardRecentActivity | null;
   isLoading: boolean;
   error: string | null;
   
@@ -51,7 +38,7 @@ export function useDashboard(options: UseDashboardOptions = {}): UseDashboardRet
   // État local
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [alerts, setAlerts] = useState<DashboardAlerts | null>(null);
-  const [recentActivity, setRecentActivity] = useState<RecentActivity | null>(null);
+  const [recentActivity, setRecentActivity] = useState<DashboardRecentActivity | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,8 +56,15 @@ export function useDashboard(options: UseDashboardOptions = {}): UseDashboardRet
         setStats(response.data);
       }
     } catch (err) {
-      const errorMessage = err instanceof ApiError ? err.message : 'Erreur lors du chargement des statistiques';
-      setError(errorMessage);
+      // Si l'API n'est pas disponible (404), utiliser les données de mock
+      if (err instanceof ApiError && err.status === 404) {
+        console.warn('API dashboard/stats non disponible, utilisation des données de mock');
+        const { mockDashboardStats } = await import('@/lib/mockDashboardData');
+        setStats(mockDashboardStats);
+      } else {
+        const errorMessage = err instanceof ApiError ? err.message : 'Erreur lors du chargement des statistiques';
+        setError(errorMessage);
+      }
     }
   }, []);
 
@@ -83,22 +77,36 @@ export function useDashboard(options: UseDashboardOptions = {}): UseDashboardRet
         setAlerts(response.data);
       }
     } catch (err) {
-      const errorMessage = err instanceof ApiError ? err.message : 'Erreur lors du chargement des alertes';
-      setError(errorMessage);
+      // Si l'API n'est pas disponible (404), utiliser les données de mock
+      if (err instanceof ApiError && err.status === 404) {
+        console.warn('API dashboard/alerts non disponible, utilisation des données de mock');
+        const { mockDashboardAlerts } = await import('@/lib/mockDashboardData');
+        setAlerts(mockDashboardAlerts);
+      } else {
+        const errorMessage = err instanceof ApiError ? err.message : 'Erreur lors du chargement des alertes';
+        setError(errorMessage);
+      }
     }
   }, []);
 
   // Fonction pour récupérer l'activité récente
   const fetchRecentActivity = useCallback(async () => {
     try {
-      const response = await apiService.get<RecentActivity>('/dashboard/recent-activity');
+      const response = await apiService.get<DashboardRecentActivity>('/dashboard/recent-activity');
       
       if (response.success && response.data) {
         setRecentActivity(response.data);
       }
     } catch (err) {
-      const errorMessage = err instanceof ApiError ? err.message : 'Erreur lors du chargement de l\'activité récente';
-      setError(errorMessage);
+      // Si l'API n'est pas disponible (404), utiliser les données de mock
+      if (err instanceof ApiError && err.status === 404) {
+        console.warn('API dashboard/recent-activity non disponible, utilisation des données de mock');
+        const { mockDashboardRecentActivity } = await import('@/lib/mockDashboardData');
+        setRecentActivity(mockDashboardRecentActivity);
+      } else {
+        const errorMessage = err instanceof ApiError ? err.message : 'Erreur lors du chargement de l\'activité récente';
+        setError(errorMessage);
+      }
     }
   }, []);
 

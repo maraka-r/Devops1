@@ -93,8 +93,7 @@ const createMaterielHandler = async (request: NextRequest): Promise<NextResponse
 // Appliquer les middlewares
 const getHandler = compose(
   withErrorHandler,
-  (handler) => withMethodValidation(['GET'], handler),
-  withAuth
+  (handler) => withMethodValidation(['GET'], handler)
 )(getMaterielsHandler);
 
 const postHandler = compose(

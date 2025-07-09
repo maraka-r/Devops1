@@ -107,10 +107,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
         apiService.removeAuthToken();
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération de l\'utilisateur:', error);
-      
-      // Si erreur 401, nettoyer l'authentification
-      if (error instanceof ApiError && error.status === 401) {
+      // Si l'erreur est un 404 ou 401, c'est normal (pas d'utilisateur connecté ou token invalide)
+      if (error instanceof ApiError && (error.status === 404 || error.status === 401)) {
+        // Ne pas logger cette erreur car c'est un comportement normal
+        setUser(null);
+        apiService.removeAuthToken();
+      } else if (error instanceof Error && (
+        error.message.includes('404') || 
+        error.message.includes('401') ||
+        error.message.includes('La ressource demandée n\'est pas disponible')
+      )) {
+        // Fallback pour les autres types d'erreurs 404/401
+        setUser(null);
+        apiService.removeAuthToken();
+      } else {
+        // Autres erreurs à logger
+        console.error('Erreur lors de la récupération de l\'utilisateur:', error);
         setUser(null);
         apiService.removeAuthToken();
       }

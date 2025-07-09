@@ -48,45 +48,7 @@ export const mockDashboardAlerts: DashboardAlerts = {
 };
 
 export const mockDashboardRecentActivity: DashboardRecentActivity = {
-  locations: [
-    {
-      id: 'loc-001',
-      materielId: 'mat-001',
-      userId: 'user-001',
-      startDate: new Date('2025-07-10').toISOString(),
-      endDate: new Date('2025-07-15').toISOString(),
-      status: LocationStatus.ACTIVE,
-      totalPrice: 1250.00,
-      notes: 'Location pour chantier centre-ville',
-      createdAt: new Date('2025-07-08').toISOString(),
-      updatedAt: new Date('2025-07-08').toISOString(),
-      materiel: {
-        id: 'mat-001',
-        name: 'Grue mobile 25T',
-        type: MaterielType.GRUE_MOBILE,
-        status: 'RENTED' as any,
-        description: 'Grue mobile de 25 tonnes, parfaite pour les chantiers de moyenne envergure',
-        pricePerDay: 250.00,
-        specifications: { capaciteMax: 25, hauteurMax: 35, porteMax: 28 },
-        images: ['/images/grue-mobile-1.jpg'],
-        manualUrl: '/manuals/grue-mobile.pdf',
-        createdAt: new Date('2025-01-15').toISOString(),
-        updatedAt: new Date('2025-07-08').toISOString(),
-      },
-      user: {
-        id: 'user-001',
-        email: 'client@example.com',
-        name: 'Martin Construction',
-        phone: '+33123456789',
-        company: 'Martin Construction SARL',
-        role: 'CLIENT' as any,
-        status: 'ACTIVE' as any,
-        emailVerified: true,
-        createdAt: new Date('2025-01-10').toISOString(),
-        updatedAt: new Date('2025-07-01').toISOString(),
-      },
-    },
-  ],
+  locations: [], // Simplifié pour éviter les erreurs de types Prisma complexes
   newClients: 8,
   completedLocations: 12,
   recentPayments: [
@@ -157,6 +119,6 @@ export const mockChartData: DashboardChartData = {
     { type: MaterielType.NACELLE_CISEAUX, available: 6, rented: 3, maintenance: 0 },
     { type: MaterielType.NACELLE_TELESCOPIQUE, available: 4, rented: 2, maintenance: 1 },
     { type: MaterielType.COMPACTEUR, available: 3, rented: 2, maintenance: 0 },
-    { type: MaterielType.CHARIOT_ELEVATEUR, available: 5, rented: 1, maintenance: 0 },
+    { type: MaterielType.AUTRE, available: 5, rented: 1, maintenance: 0 },
   ],
 };

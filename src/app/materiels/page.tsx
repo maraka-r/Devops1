@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Eye, Calendar, Loader2, AlertCircle } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import Link from 'next/link';
-import Image from 'next/image';
+import { ImageWithFallback } from '@/components/ui/image-with-fallback';
 
 // Types pour les filtres et tri
 interface SortOption {
@@ -133,21 +133,13 @@ export default function MaterielsPage() {
     <Card className="h-full flex flex-col group hover:shadow-lg transition-shadow duration-200">
       <CardHeader className="p-0">
         <div className="relative aspect-video overflow-hidden rounded-t-lg">
-          {material.images && material.images.length > 0 ? (
-            <Image
-              src={material.images[0]}
-              alt={material.name}
-              fill
-              className="object-cover group-hover:scale-105 transition-transform duration-200"
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-              <div className="text-gray-400 text-center">
-                <Calendar className="h-12 w-12 mx-auto mb-2" />
-                <p className="text-sm">Pas d&apos;image</p>
-              </div>
-            </div>
-          )}
+          <ImageWithFallback
+            src={material.images?.[0]}
+            alt={material.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-200"
+            fallbackIcon="construction"
+          />
           <div className="absolute top-2 right-2">
             {getStatusBadge(material.status)}
           </div>
@@ -155,7 +147,11 @@ export default function MaterielsPage() {
       </CardHeader>
       
       <CardContent className="flex-1 p-4">
-        <CardTitle className="text-lg mb-2 line-clamp-2">{material.name}</CardTitle>
+        <Link href={`/materiels/${material.id}`}>
+          <CardTitle className="text-lg mb-2 line-clamp-2 hover:text-primary transition-colors cursor-pointer">
+            {material.name}
+          </CardTitle>
+        </Link>
         <p className="text-sm text-gray-600 mb-3 line-clamp-3">{material.description}</p>
         
         <div className="space-y-2">

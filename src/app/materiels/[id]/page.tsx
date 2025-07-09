@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import Link from 'next/link';
-import Image from 'next/image';
+import { ImageWithFallback } from '@/components/ui/image-with-fallback';
 import { cn } from '@/lib/utils';
 import { format, addDays, isAfter } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -277,42 +277,36 @@ export default function MaterielDetailPage() {
             <Card>
               <CardContent className="p-0">
                 <div className="aspect-video rounded-lg overflow-hidden">
-                  {materiel.images && materiel.images.length > 0 ? (
-                    <Image
-                      src={materiel.images[0]}
-                      alt={materiel.name}
-                      width={600}
-                      height={400}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                      <div className="text-gray-400 text-center">
-                        <Eye className="h-16 w-16 mx-auto mb-4" />
-                        <p>Aucune image disponible</p>
-                      </div>
-                    </div>
-                  )}
+                  <ImageWithFallback
+                    src={materiel.images?.[0]}
+                    alt={materiel.name}
+                    width={600}
+                    height={400}
+                    className="w-full h-full object-cover"
+                    fallbackIcon="construction"
+                  />
                 </div>
               </CardContent>
             </Card>
 
             {/* Images supplémentaires si disponibles */}
-            {materiel.images && materiel.images.length > 1 && (
+            {/* {materiel.images && materiel.images.length > 1 && (
               <div className="grid grid-cols-3 gap-4">
                 {materiel.images.slice(1, 4).map((image, index) => (
                   <div key={index} className="aspect-video rounded-lg overflow-hidden">
-                    <Image
+                    <ImageWithFallback
                       src={image}
                       alt={`${materiel.name} - ${index + 2}`}
                       width={200}
                       height={150}
                       className="w-full h-full object-cover"
+                      fallbackIcon="construction"
+                      size="small"
                     />
                   </div>
                 ))}
               </div>
-            )}
+            )} */}
           </div>
 
           {/* Informations du matériel */}
@@ -403,7 +397,7 @@ export default function MaterielDetailPage() {
             )}
 
             {/* Manuel d'utilisation */}
-            {materiel.manualUrl && (
+            {/* {materiel.manualUrl && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Documentation</CardTitle>
@@ -421,7 +415,7 @@ export default function MaterielDetailPage() {
                   </Button>
                 </CardContent>
               </Card>
-            )}
+            )} */}
 
             {/* Actions */}
             <div className="space-y-4">
@@ -480,11 +474,11 @@ export default function MaterielDetailPage() {
                 </div>
               )}
 
-              <Button asChild variant="outline" size="lg" className="w-full">
+              {/* <Button asChild variant="outline" size="lg" className="w-full">
                 <Link href="/materiels">
                   Voir d&apos;autres matériels
                 </Link>
-              </Button>
+              </Button> */}
             </div>
           </div>
         </div>

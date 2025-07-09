@@ -1,4 +1,9 @@
-import { DashboardLayout } from '@/components/dashboard/layout';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/hooks/api/useNotifications';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,82 +20,68 @@ import {
   Clock,
   User,
   Wrench,
-  FileText
+  FileText,
+  Loader2,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { NotificationType } from '@/types';
 
-interface Notification {
-  id: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-  category: 'system' | 'location' | 'materiel' | 'user';
-}
-
-const notifications: Notification[] = [
-  {
-    id: '1',
-    type: 'warning',
-    title: 'Maintenance requise',
-    message: 'La pelleteuse CAT 320 nécessite une maintenance dans 2 jours',
-    time: 'Il y a 30 minutes',
-    read: false,
-    category: 'materiel'
-  },
-  {
-    id: '2',
-    type: 'success',
-    title: 'Nouvelle location',
-    message: 'Location confirmée pour la grue 50T par Entreprise Martin',
-    time: 'Il y a 1 heure',
-    read: false,
-    category: 'location'
-  },
-  {
-    id: '3',
-    type: 'info',
-    title: 'Nouveau client',
-    message: 'Jean Dubois a créé un compte et attend validation',
-    time: 'Il y a 2 heures',
-    read: true,
-    category: 'user'
-  },
-  {
-    id: '4',
-    type: 'error',
-    title: 'Panne signalée',
-    message: 'Problème hydraulique sur la nacelle JLG 450AJ',
-    time: 'Il y a 4 heures',
-    read: true,
-    category: 'materiel'
-  },
-  {
-    id: '5',
-    type: 'info',
-    title: 'Rapport mensuel',
-    message: 'Le rapport de performance de novembre est disponible',
-    time: 'Hier',
-    read: true,
-    category: 'system'
+const getNotificationIcon = (type: NotificationType) => {
+  // Map notification types to UI display
+  if (type.includes('CONFIRMED') || type.includes('RECEIVED') || type.includes('COMPLETED') || type.includes('AVAILABLE')) {
+    return <CheckCircle className="h-5 w-5 text-green-500" />;
   }
-];
+  if (type.includes('OVERDUE') || type.includes('DUE') || type.includes('REMINDER') || type.includes('MAINTENANCE')) {
+    return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+  }
+  if (type.includes('SECURITY_ALERT')) {
+    return <AlertTriangle className="h-5 w-5 text-red-500" />;
+  }
+  return <Info className="h-5 w-5 text-blue-500" />;
+};
 
-const getNotificationIcon = (type: string) => {
-  switch (type) {
-    case 'success':
-      return <CheckCircle className="h-5 w-5 text-green-500" />;
-    case 'warning':
-      return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
-    case 'error':
-      return <AlertTriangle className="h-5 w-5 text-red-500" />;
+const getTypeCategory = (type: NotificationType): string => {
+  if (type.includes('LOCATION')) return 'location';
+  if (type.includes('PAYMENT')) return 'payment';
+  if (type.includes('MATERIEL')) return 'materiel';
+  if (type.includes('ACCOUNT')) return 'user';
+  return 'system';
+};
+
+const getCategoryColor = (category: string): string => {
+  switch (category) {
+    case 'location':
+      return 'text-green-600 bg-green-100';
+    case 'materiel':
+      return 'text-orange-600 bg-orange-100';
+    case 'payment':
+      return 'text-blue-600 bg-blue-100';
+    case 'user':
+      return 'text-purple-600 bg-purple-100';
     default:
-      return <Info className="h-5 w-5 text-blue-500" />;
+      return 'text-gray-600 bg-gray-100';
+  }
+};
+
+const formatNotificationTime = (date: Date): string => {
+  const now = new Date();
+  const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+  
+  if (diffInHours < 1) {
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    return `Il y a ${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''}`;
+  } else if (diffInHours < 24) {
+    return `Il y a ${diffInHours} heure${diffInHours > 1 ? 's' : ''}`;
+  } else {
+    return format(date, 'dd/MM/yyyy à HH:mm', { locale: fr });
   }
 };
 
 const getCategoryIcon = (category: string) => {
-  switch (category) {
+  switch (category.toLowerCase()) {
     case 'materiel':
       return <Wrench className="h-4 w-4" />;
     case 'location':
@@ -102,21 +93,93 @@ const getCategoryIcon = (category: string) => {
   }
 };
 
-const getCategoryColor = (category: string) => {
-  switch (category) {
-    case 'materiel':
-      return 'bg-orange-100 text-orange-800';
-    case 'location':
-      return 'bg-blue-100 text-blue-800';
-    case 'user':
-      return 'bg-purple-100 text-purple-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
 export default function NotificationsPage() {
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { 
+    notifications, 
+    fetchNotifications, 
+    deleteNotification, 
+    isLoading, 
+    error,
+    unreadCount 
+  } = useNotifications();
+  
+  const [filter] = useState<'all' | 'unread'>('all');
+
+  // Charger les notifications au montage
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchNotifications();
+    }
+  }, [isAuthenticated, user, fetchNotifications]);
+
+  const filteredNotifications = filter === 'unread' 
+    ? notifications.filter(n => !n.read)
+    : notifications;
+
+  const handleDelete = async (notificationId: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette notification ?')) {
+      try {
+        await deleteNotification(notificationId);
+      } catch (err) {
+        console.error('Erreur lors de la suppression:', err);
+      }
+    }
+  };
+
+  // Rediriger si pas authentifié
+  if (!authLoading && !isAuthenticated) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertCircle className="h-16 w-16 text-amber-500 mx-auto mb-4" />
+            <h1 className="text-xl font-semibold text-gray-900 mb-2">
+              Connexion requise
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Vous devez être connecté pour voir vos notifications
+            </p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // État de chargement
+  if (authLoading || isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-gray-600">Chargement des notifications...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // État d'erreur
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h1 className="text-xl font-semibold text-gray-900 mb-2">
+              Erreur de chargement
+            </h1>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <Button onClick={() => fetchNotifications()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Réessayer
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -186,7 +249,7 @@ export default function NotificationsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {notifications.filter(n => n.category === 'materiel').length}
+                    {notifications.filter(n => getTypeCategory(n.type) === 'materiel').length}
                   </p>
                   <p className="text-sm text-muted-foreground">Matériel</p>
                 </div>
@@ -202,7 +265,7 @@ export default function NotificationsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {notifications.filter(n => n.category === 'location').length}
+                    {notifications.filter(n => getTypeCategory(n.type) === 'location').length}
                   </p>
                   <p className="text-sm text-muted-foreground">Locations</p>
                 </div>
@@ -221,7 +284,7 @@ export default function NotificationsPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="space-y-0">
-              {notifications.map((notification, index) => (
+              {filteredNotifications.map((notification, index) => (
                 <div key={notification.id}>
                   <div className={`p-4 flex items-start gap-4 hover:bg-muted/50 transition-colors ${
                     !notification.read ? 'bg-blue-50/50' : ''
@@ -247,14 +310,18 @@ export default function NotificationsPage() {
                         <div className="flex items-center gap-2">
                           <Badge 
                             variant="secondary" 
-                            className={`${getCategoryColor(notification.category)}`}
+                            className={`${getCategoryColor(getTypeCategory(notification.type))}`}
                           >
                             <span className="mr-1">
-                              {getCategoryIcon(notification.category)}
+                              {getCategoryIcon(getTypeCategory(notification.type))}
                             </span>
-                            {notification.category}
+                            {getTypeCategory(notification.type)}
                           </Badge>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDelete(notification.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -262,12 +329,12 @@ export default function NotificationsPage() {
                       
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
-                        {notification.time}
+                        {formatNotificationTime(notification.createdAt)}
                       </div>
                     </div>
                   </div>
                   
-                  {index < notifications.length - 1 && <Separator />}
+                  {index < filteredNotifications.length - 1 && <Separator />}
                 </div>
               ))}
             </div>
