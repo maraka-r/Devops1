@@ -7,6 +7,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useMaterials } from '@/hooks/api/useMaterials';
 import { useLocations } from '@/hooks/api/useLocations';
+import { useFavorites } from '@/hooks/api/useFavorites';
+import { useAuth } from '@/contexts/AuthContext';
 import { Materiel, Location } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +24,8 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-  Settings
+  Settings,
+  Heart
 } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import Link from 'next/link';
@@ -61,11 +64,34 @@ export default function MaterielDetailPage() {
   // Hooks pour la gestion des matériels et locations
   const { getMaterial, error, clearError } = useMaterials();
   const { getLocationsByMaterial } = useLocations();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isAuthenticated } = useAuth();
 
   // État local
   const [materiel, setMateriel] = useState<Materiel | null>(null);
   const [availabilityDate, setAvailabilityDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+
+  // Vérifier si le matériel est dans les favoris
+  const isInFavorites = materielId ? isFavorite(materielId) : false;
+
+  // Gérer le toggle des favoris
+  const handleToggleFavorite = async () => {
+    if (!isAuthenticated || !materielId) {
+      router.push(`/auth/login?redirect=/materiels/${materielId}`);
+      return;
+    }
+
+    try {
+      setIsFavoriteLoading(true);
+      await toggleFavorite(materielId);
+    } catch (error) {
+      console.error('Erreur lors de la gestion du favori:', error);
+    } finally {
+      setIsFavoriteLoading(false);
+    }
+  };
 
   // Fonction pour calculer la date de disponibilité à partir des locations actives
   const calculateAvailabilityDate = (locations: Location[]) => {
@@ -419,44 +445,63 @@ export default function MaterielDetailPage() {
 
             {/* Actions */}
             <div className="space-y-4">
-              {isAvailable ? (
-                // Si le matériel est disponible immédiatement
-                <Button asChild size="lg" className="w-full">
-                  <Link href={`/materiels/${materiel.id}/louer`}>
-                    <Calendar className="h-5 w-5 mr-2" />
-                    Réserver ce matériel
-                  </Link>
-                </Button>
-              ) : materiel.status === 'RENTED' ? (
-                // Si le matériel est loué, permettre la réservation future qu'on connaisse ou non la date exacte
-                <>
-                  <Button asChild size="lg" className="w-full" variant="outline">
+              {/* Boutons d'action principaux */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {isAvailable ? (
+                  // Si le matériel est disponible immédiatement
+                  <Button asChild size="lg" className="flex-1">
+                    <Link href={`/materiels/${materiel.id}/louer`}>
+                      <Calendar className="h-5 w-5 mr-2" />
+                      Réserver ce matériel
+                    </Link>
+                  </Button>
+                ) : materiel.status === 'RENTED' ? (
+                  // Si le matériel est loué, permettre la réservation future
+                  <Button asChild size="lg" className="flex-1" variant="outline">
                     <Link href={`/materiels/${materiel.id}/louer`}>
                       <Calendar className="h-5 w-5 mr-2" />
                       Réserver pour plus tard
                     </Link>
                   </Button>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <Clock className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0" />
-                      <div>
-                        <p className="text-yellow-800 font-medium">
-                          Matériel actuellement loué
-                        </p>
-                        <p className="text-yellow-700 text-sm">
-                          {availabilityDate ? (
-                            <>Ce matériel est loué jusqu&apos;au {format(availabilityDate, 'dd MMMM yyyy', { locale: fr })}. 
-                            Vous pouvez le réserver pour une utilisation après cette date.</>
-                          ) : (
-                            <>Ce matériel est actuellement loué. 
-                            Vous pouvez le réserver pour une utilisation future.</>
-                          )}
-                        </p>
-                      </div>
+                ) : null}
+
+                {/* Bouton favoris */}
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleToggleFavorite}
+                  disabled={isFavoriteLoading}
+                  className="flex-shrink-0"
+                >
+                  <Heart 
+                    className={`h-5 w-5 mr-2 ${isInFavorites ? 'fill-red-500 text-red-500' : ''}`} 
+                  />
+                  {isInFavorites ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                </Button>
+              </div>
+
+              {/* Messages d'information pour statuts spéciaux */}
+              {materiel.status === 'RENTED' ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <Clock className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0" />
+                    <div>
+                      <p className="text-yellow-800 font-medium">
+                        Matériel actuellement loué
+                      </p>
+                      <p className="text-yellow-700 text-sm">
+                        {availabilityDate ? (
+                          <>Ce matériel est loué jusqu&apos;au {format(availabilityDate, 'dd MMMM yyyy', { locale: fr })}. 
+                          Vous pouvez le réserver pour une utilisation après cette date.</>
+                        ) : (
+                          <>Ce matériel est actuellement loué. 
+                          Vous pouvez le réserver pour une utilisation future.</>
+                        )}
+                      </p>
                     </div>
                   </div>
-                </>
-              ) : (
+                </div>
+              ) : !isAvailable ? (
                 // Pour tout autre état (en maintenance, hors service)
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <div className="flex items-center">
@@ -472,7 +517,7 @@ export default function MaterielDetailPage() {
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* <Button asChild variant="outline" size="lg" className="w-full">
                 <Link href="/materiels">
