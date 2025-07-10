@@ -158,6 +158,7 @@ export async function GET(request: NextRequest) {
           phone: true,
           company: true,
           address: true,
+          avatar: true,
           createdAt: true,
           updatedAt: true,
           locations: {
@@ -279,6 +280,7 @@ export async function GET(request: NextRequest) {
         phone: client.phone,
         company: client.company,
         address: client.address,
+        avatar: client.avatar,
         createdAt: client.createdAt,
         updatedAt: client.updatedAt
       };

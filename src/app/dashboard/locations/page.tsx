@@ -613,7 +613,8 @@ function LocationsContent() {
         {/* Results */}
         <Card>
           <CardHeader>
-            <CardTitle>Locations ({filteredLocations.length})</CardTitle>
+            <CardTitle>Locations </CardTitle>
+            {/* ({filteredLocations.length}) */}
           </CardHeader>
           <CardContent>
             {filteredLocations.length === 0 ? (

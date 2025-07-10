@@ -8,6 +8,7 @@ import { apiService } from '@/lib/api';
 import { 
   NotificationType,
   NotificationPriority,
+  ApiResponse
 } from '@/types';
 
 // Types simplifiés pour les notifications
@@ -114,13 +115,29 @@ export function useNotifications(): UseNotificationsReturn {
     setError(null);
 
     try {
-      const response = await apiService.get('/api/notifications', {
+      interface NotificationResponse {
+        notifications: SimpleNotification[];
+        unreadCount: number;
+      }
+      
+      const response = await apiService.get<ApiResponse<NotificationResponse>>('/api/notifications', {
         params: filters as Record<string, string | number | boolean>,
       });
 
-      if (response.data?.notifications) {
-        setNotifications(response.data.notifications);
-        setUnreadCount(response.data.unreadCount || 0);
+      // Type assertion pour résoudre le problème de typage
+      const data = response.data as unknown as { 
+        data?: NotificationResponse;
+        notifications?: SimpleNotification[];
+        unreadCount?: number;
+      };
+
+      if (data?.data?.notifications) {
+        setNotifications(data.data.notifications);
+        setUnreadCount(data.data.unreadCount || 0);
+      }
+      else if (data?.notifications) {
+        setNotifications(data.notifications);
+        setUnreadCount(data.unreadCount || 0);
       }
 
     } catch {
@@ -229,8 +246,19 @@ export function useNotifications(): UseNotificationsReturn {
   // Fonction pour récupérer le nombre de notifications non lues
   const getUnreadCount = useCallback(async (): Promise<number> => {
     try {
-      const response = await apiService.get('/api/notifications/unread-count');
-      const count = response.data?.count || 0;
+      interface CountResponse {
+        count: number;
+      }
+      
+      const response = await apiService.get<ApiResponse<CountResponse> | CountResponse>('/api/notifications/unread-count');
+      
+      // Type assertion pour résoudre le problème de typage
+      const data = response.data as unknown as { 
+        data?: { count: number };
+        count?: number;
+      };
+      
+      const count = data?.data?.count || data?.count || 0;
       setUnreadCount(count);
       return count;
     } catch {

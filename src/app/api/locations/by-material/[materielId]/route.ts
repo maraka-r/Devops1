@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/db';
 
 /**
  * GET: Récupérer toutes les locations pour un matériel spécifique
- * @param req Requête entrante
- * @param context Contexte avec les paramètres de route
- * @returns Liste des locations pour ce matériel
  */
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { materielId: string } }
+  request: NextRequest,
+  context: { params: Promise<{ materielId: string }> }
 ) {
   try {
-    const { materielId } = params;
+    // Récupération de l'ID du matériel depuis les paramètres de l'URL
+    const params = await context.params;
+    const materielId = params.materielId;
     
     if (!materielId) {
       return NextResponse.json(
@@ -25,7 +22,7 @@ export async function GET(
 
     const locations = await prisma.location.findMany({
       where: {
-        materielId: materielId
+        materielId
       },
       include: {
         user: {

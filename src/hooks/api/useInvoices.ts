@@ -7,6 +7,8 @@ import { useState, useCallback } from 'react';
 import { apiService } from '@/lib/api';
 import { 
   InvoiceStatus,
+  ApiResponse,
+  PaginatedResponse
 } from '@/types';
 
 // Types simplifiés pour les factures
@@ -197,12 +199,22 @@ export function useInvoices(): UseInvoicesReturn {
     setError(null);
 
     try {
-      const response = await apiService.get('/api/invoices', {
+      const response = await apiService.get<ApiResponse<SimpleInvoice[] | PaginatedResponse<SimpleInvoice>>>('/api/invoices', {
         params: filters as Record<string, string | number | boolean>,
       });
 
-      if (response.data?.invoices) {
-        setInvoices(response.data.invoices);
+      // Gérer différents formats de réponse (direct array, data property, ou pagination)
+      if (Array.isArray(response.data)) {
+        setInvoices(response.data as SimpleInvoice[]);
+      } else if (response.data && 'data' in response.data) {
+        // Format ApiResponse avec data: SimpleInvoice[]
+        if (Array.isArray(response.data.data)) {
+          setInvoices(response.data.data as SimpleInvoice[]);
+        } 
+        // Format ApiResponse avec data: { data: SimpleInvoice[] } (pagination)
+        else if (response.data.data && 'data' in response.data.data) {
+          setInvoices((response.data.data as PaginatedResponse<SimpleInvoice>).data);
+        }
       }
 
     } catch {
@@ -237,8 +249,19 @@ export function useInvoices(): UseInvoicesReturn {
     setError(null);
 
     try {
-      const response = await apiService.get(`/api/invoices/${id}`);
-      return response.data || null;
+      const response = await apiService.get<ApiResponse<SimpleInvoice> | SimpleInvoice>(`/api/invoices/${id}`);
+      
+      if (response.data) {
+        // Si c'est un ApiResponse avec une propriété data
+        if ('data' in response.data && response.data.data) {
+          return response.data.data as SimpleInvoice;
+        }
+        // Si c'est directement une SimpleInvoice
+        else if ('id' in response.data) {
+          return response.data as SimpleInvoice;
+        }
+      }
+      return null;
     } catch {
       console.log('API non disponible, recherche dans les mocks');
       const mockInvoice = mockInvoices.find(inv => inv.id === id);
@@ -254,11 +277,25 @@ export function useInvoices(): UseInvoicesReturn {
     setError(null);
 
     try {
-      const response = await apiService.post('/api/invoices', data);
+      const response = await apiService.post<ApiResponse<SimpleInvoice> | SimpleInvoice>('/api/invoices', data);
+      
+      let newInvoice: SimpleInvoice;
       
       if (response.data) {
-        setInvoices(prev => [...prev, response.data]);
-        return response.data;
+        // Si c'est un ApiResponse avec une propriété data
+        if ('data' in response.data && response.data.data) {
+          newInvoice = response.data.data as SimpleInvoice;
+        }
+        // Si c'est directement une SimpleInvoice
+        else if ('id' in response.data) {
+          newInvoice = response.data as SimpleInvoice;
+        }
+        else {
+          throw new Error('Format de réponse invalide');
+        }
+        
+        setInvoices(prev => [...prev, newInvoice]);
+        return newInvoice;
       }
       
       throw new Error('Pas de données dans la réponse');
@@ -301,13 +338,27 @@ export function useInvoices(): UseInvoicesReturn {
     setError(null);
 
     try {
-      const response = await apiService.put(`/api/invoices/${id}/status`, { status });
+      const response = await apiService.put<ApiResponse<SimpleInvoice> | SimpleInvoice>(`/api/invoices/${id}/status`, { status });
+      
+      let updatedInvoice: SimpleInvoice;
       
       if (response.data) {
+        // Si c'est un ApiResponse avec une propriété data
+        if ('data' in response.data && response.data.data) {
+          updatedInvoice = response.data.data as SimpleInvoice;
+        }
+        // Si c'est directement une SimpleInvoice
+        else if ('id' in response.data) {
+          updatedInvoice = response.data as SimpleInvoice;
+        }
+        else {
+          throw new Error('Format de réponse invalide');
+        }
+        
         setInvoices(prev => prev.map(inv => 
-          inv.id === id ? response.data : inv
+          inv.id === id ? updatedInvoice : inv
         ));
-        return response.data;
+        return updatedInvoice;
       }
       
       throw new Error('Pas de données dans la réponse');

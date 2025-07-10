@@ -27,6 +27,7 @@ interface SimpleLocation {
     email: string;
     company?: string;
     phone?: string;
+    avatar?: string;
   };
   materiel?: {
     id: string;
@@ -38,6 +39,18 @@ interface SimpleLocation {
   };
 }
 
+// Réponse paginée spécifique pour les locations
+interface LocationsResponse {
+  items: SimpleLocation[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    hasNext: boolean;
+  };
+}
+
+// Type pour les filtres de recherche
 interface LocationSearchFilters {
   query?: string;
   status?: LocationStatus | LocationStatus[];
@@ -47,6 +60,7 @@ interface LocationSearchFilters {
   endDate?: string;
   page?: number;
   limit?: number;
+  [key: string]: string | number | boolean | LocationStatus | LocationStatus[] | undefined;
 }
 
 // Mock data pour développement (fallback si API indisponible)
@@ -166,23 +180,45 @@ export function useReservations(options: UseReservationsOptions = {}): UseReserv
     setIsLoading(true);
     setError(null);
 
+    // Convertir les filtres pour correspondre au format attendu par l'API
+    const apiFilters: Record<string, string | number | boolean> = {};
+    
+    // Traiter chaque propriété pour la convertir au format attendu
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (key === 'status' && Array.isArray(value)) {
+          // Convertir un tableau de statuts en chaîne (e.g., "PENDING,CONFIRMED")
+          apiFilters[key] = value.join(',');
+        } else {
+          // Convertir en string, number, ou boolean selon le cas
+          apiFilters[key] = value as string | number | boolean;
+        }
+      }
+    });
+
     try {
       // Essayer l'API d'abord
-      const response = await apiService.get('/api/locations/reservations', {
-        params: filters,
+      const response = await apiService.get<LocationsResponse>('/api/locations/reservations', {
+        params: apiFilters,
       });
 
-      if (response.data?.items) {
-        if (filters.page === 1) {
-          setReservations(response.data.items);
-        } else {
-          setReservations(prev => [...prev, ...response.data.items]);
+      if (response.success && response.data) {
+        const responseData = response.data as LocationsResponse;
+        
+        if (responseData.items) {
+          if (filters.page === 1 || !filters.page) {
+            setReservations(responseData.items);
+          } else {
+            setReservations(prev => [...prev, ...responseData.items]);
+          }
+          
+          if (responseData.pagination) {
+            setCurrentPage(responseData.pagination.page || 1);
+            setTotalCount(responseData.pagination.total || 0);
+            setHasNextPage(responseData.pagination.hasNext || false);
+          }
         }
-        setCurrentPage(response.data.pagination?.page || 1);
-        setTotalCount(response.data.pagination?.total || 0);
-        setHasNextPage(response.data.pagination?.hasNext || false);
       }
-
     } catch {
       console.log('API non disponible, utilisation des mocks pour les réservations');
       
@@ -211,8 +247,11 @@ export function useReservations(options: UseReservationsOptions = {}): UseReserv
     setError(null);
 
     try {
-      const response = await apiService.get(`/api/locations/${id}`);
-      return response.data || null;
+      const response = await apiService.get<SimpleLocation>(`/api/locations/${id}`);
+      if (response.success && response.data) {
+        return response.data as SimpleLocation;
+      }
+      return null;
     } catch {
       console.log('API non disponible, recherche dans les mocks');
       const mockReservation = mockReservations.find(res => res.id === id);
@@ -228,14 +267,16 @@ export function useReservations(options: UseReservationsOptions = {}): UseReserv
     setError(null);
 
     try {
-      const response = await apiService.put(`/api/locations/${id}`, data);
+      const response = await apiService.put<SimpleLocation>(`/api/locations/${id}`, data);
       
-      if (response.data) {
+      if (response.success && response.data) {
+        const updatedLocation = response.data as SimpleLocation;
+        
         // Mettre à jour dans la liste locale
         setReservations(prev => prev.map(res => 
-          res.id === id ? response.data : res
+          res.id === id ? updatedLocation : res
         ));
-        return response.data;
+        return updatedLocation;
       }
       
       throw new Error('Pas de données dans la réponse');
