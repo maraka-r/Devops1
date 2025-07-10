@@ -23,6 +23,7 @@ export function middleware(request: NextRequest) {
                   request.headers.get('authorization')?.replace('Bearer ', '');
 
     if (!token) {
+      console.warn(`🔒 Tentative d'accès non autorisée à ${pathname} - Token manquant`);
       // Redirection vers la page de login si pas de token
       return NextResponse.redirect(new URL('/auth/login', request.url));
     }
@@ -33,6 +34,7 @@ export function middleware(request: NextRequest) {
       // Protection /dashboard - seuls les ADMIN peuvent accéder
       if (pathname.startsWith('/dashboard')) {
         if (user.role !== 'ADMIN') {
+          console.warn(`🔒 Tentative d'accès non autorisée à ${pathname} par utilisateur ${user.email} (rôle: ${user.role})`);
           // Si l'utilisateur est un client (USER), rediriger vers /client
           if (user.role === 'USER') {
             return NextResponse.redirect(new URL('/client', request.url));
@@ -45,6 +47,7 @@ export function middleware(request: NextRequest) {
       // Protection /client - seuls les USER (clients) peuvent accéder
       if (pathname.startsWith('/client')) {
         if (user.role !== 'USER') {
+          console.warn(`🔒 Tentative d'accès non autorisée à ${pathname} par utilisateur ${user.email} (rôle: ${user.role})`);
           // Si l'utilisateur est un admin, rediriger vers /dashboard
           if (user.role === 'ADMIN') {
             return NextResponse.redirect(new URL('/dashboard', request.url));
@@ -55,9 +58,62 @@ export function middleware(request: NextRequest) {
       }
       
     } catch (error) {
-      console.error('Erreur de vérification du token:', error);
+      console.error('❌ Erreur de vérification du token:', error);
       // Token invalide ou expiré, rediriger vers login
       return NextResponse.redirect(new URL('/auth/login', request.url));
+    }
+  }
+
+  // Protection des routes API sensibles
+  if (pathname.startsWith('/api/')) {
+    // Routes API publiques (pas de protection nécessaire)
+    const publicApiRoutes = [
+      '/api/health',
+      '/api/auth/login',
+      '/api/auth/register',
+      '/api/materiels', // Catalogue public
+      '/api/materiels/categories', // Catégories publiques
+    ];
+
+    // Routes API qui nécessitent une authentification ADMIN
+    const adminApiRoutes = [
+      '/api/dashboard/admin',
+      '/api/users',
+      '/api/reports',
+      '/api/settings/company',
+    ];
+
+    const isPublicRoute = publicApiRoutes.some(route => pathname.startsWith(route));
+    const isAdminRoute = adminApiRoutes.some(route => pathname.startsWith(route));
+
+    // Si c'est une route admin, vérifier le rôle
+    if (isAdminRoute && !isPublicRoute) {
+      const token = request.cookies.get('token')?.value || 
+                    request.headers.get('authorization')?.replace('Bearer ', '');
+
+      if (!token) {
+        return NextResponse.json(
+          { error: 'Token d\'authentification requis' },
+          { status: 401 }
+        );
+      }
+
+      try {
+        const user: JwtPayload = verifyToken(token);
+        if (user.role !== 'ADMIN') {
+          console.warn(`🔒 Tentative d'accès API non autorisée à ${pathname} par ${user.email} (rôle: ${user.role})`);
+          return NextResponse.json(
+            { error: 'Accès interdit - Droits administrateur requis' },
+            { status: 403 }
+          );
+        }
+      } catch (tokenError) {
+        console.error('❌ Erreur de vérification du token API:', tokenError);
+        return NextResponse.json(
+          { error: 'Token invalide ou expiré' },
+          { status: 401 }
+        );
+      }
     }
   }
   
@@ -85,8 +141,8 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/api/:path*',      // Toutes les routes API (pour CORS)
-    '/dashboard/:path*', // Routes dashboard (protection ADMIN)
-    '/client/:path*',   // Routes client (protection USER)
+    '/api/:path*',          // Toutes les routes API (pour CORS + protection)
+    '/dashboard/:path*',    // Routes dashboard (protection ADMIN)
+    '/client/:path*',       // Routes client (protection USER)
   ],
 };
