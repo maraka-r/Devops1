@@ -124,17 +124,17 @@ jobs:
             # Modifier docker-compose.yml pour utiliser l'image tagguée
             sed -i 's|image: maraka-app:latest|image: maraka-app:${{ github.sha }}|' docker-compose.yml
 
-            # Injection des variables d'environnement
-            echo "🔧 Injection des variables d'environnement..."
-            sleep 10  # Attendre que le conteneur soit prêt
-            ./scripts/sync-env.sh app-app-1
-
             # Supprimer nginx.conf s'il est mentionné
             sed -i '/nginx.conf/d' docker-compose.yml || true
 
             # Lancer docker-compose
             docker-compose down || true
             docker-compose up -d
+
+            # Injection des variables d'environnement
+            echo "🔧 Injection des variables d'environnement..."
+            sleep 10  # Attendre que le conteneur soit prêt
+            ./scripts/sync-env.sh app-app-1
 
             # Nettoyage images non utilisées
             docker image prune -f
