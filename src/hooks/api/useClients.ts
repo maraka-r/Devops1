@@ -9,9 +9,10 @@ import {
   User, 
   ClientSearchResponse,
   ClientSearchFilters,
-  PaginatedResponse,
+  // PaginatedResponse,
   UserRole,
-  UserStatus
+  UserStatus,
+  // ApiResponse
 } from '@/types';
 
 // Types pour les statistiques client
@@ -102,14 +103,32 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.get<PaginatedResponse<Omit<User, 'password'>>>('/clients', {
+      // Utiliser any temporairement pour résoudre les problèmes de typage avec l'API
+      const response = await apiService.get('/users', {
         params: filters as Record<string, string | number | boolean>
       });
       
       if (response.success && response.data) {
-        setClients(response.data.data);
-        setTotalCount(response.data.pagination.total);
-        setCurrentPage(response.data.pagination.page);
+        // Adapter la structure de réponse
+        // Gérer différentes structures de réponse possibles
+        if (typeof response.data === 'object' && response.data !== null) {
+          if ('data' in response.data && Array.isArray(response.data.data)) {
+            // Format de réponse paginée
+            setClients(response.data.data);
+            if ('pagination' in response.data && response.data.pagination && 
+                typeof response.data.pagination === 'object' && 
+                response.data.pagination !== null) {
+              const pagination = response.data.pagination as { total: number; page: number };
+              setTotalCount(pagination.total);
+              setCurrentPage(pagination.page);
+            }
+          } else if (Array.isArray(response.data)) {
+            // Format de tableau direct
+            setClients(response.data);
+            setTotalCount(response.data.length);
+            setCurrentPage(1);
+          }
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof ApiError ? err.message : 'Erreur lors du chargement des clients';
@@ -148,12 +167,14 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.post<Omit<User, 'password'>>('/clients', data);
+      const response = await apiService.post('/users', data);
       
       if (response.success && response.data) {
+        // Typer correctement la réponse pour éviter les erreurs TypeScript
+        const userData = response.data as Omit<User, 'password'>;
         // Ajouter le nouveau client à la liste
-        setClients(prev => [response.data!, ...prev]);
-        return response.data;
+        setClients(prev => [userData, ...prev]);
+        return userData;
       } else {
         throw new ApiError(response.error || 'Erreur lors de la création', 400);
       }
@@ -172,16 +193,18 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.put<Omit<User, 'password'>>(`/clients/${id}`, data);
+      const response = await apiService.put(`/users/${id}`, data);
       
       if (response.success && response.data) {
+        // Typer correctement la réponse pour éviter les erreurs TypeScript
+        const userData = response.data as Omit<User, 'password'>;
         // Mettre à jour le client dans la liste
         setClients(prev => 
           prev.map(client => 
-            client.id === id ? response.data! : client
+            client.id === id ? userData : client
           )
         );
-        return response.data;
+        return userData;
       } else {
         throw new ApiError(response.error || 'Erreur lors de la mise à jour', 400);
       }
@@ -200,7 +223,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.delete(`/clients/${id}`);
+      const response = await apiService.delete(`/users/${id}`);
       
       if (response.success) {
         // Retirer le client de la liste
@@ -224,7 +247,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.get<Omit<User, 'password'>>(`/clients/${id}`);
+      const response = await apiService.get<Omit<User, 'password'>>(`/users/${id}`);
       
       if (response.success && response.data) {
         return response.data;
@@ -246,7 +269,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.get<Omit<User, 'password'>[]>('/clients/active');
+      const response = await apiService.get<Omit<User, 'password'>[]>('/users/active');
       
       if (response.success && response.data) {
         setClients(response.data);
@@ -263,7 +286,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
   // Fonction pour récupérer les statistiques d'un client
   const getClientStats = useCallback(async (id: string): Promise<ClientStats> => {
     try {
-      const response = await apiService.get<ClientStats>(`/clients/${id}/stats`);
+      const response = await apiService.get<ClientStats>(`/users/${id}/stats`);
       
       if (response.success && response.data) {
         return response.data;
@@ -283,7 +306,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.patch(`/clients/${id}/status`, { status });
+      const response = await apiService.patch(`/users/${id}/status`, { status });
       
       if (response.success) {
         // Mettre à jour le client dans la liste
@@ -306,7 +329,18 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
 
   // Fonction pour rafraîchir les clients
   const refreshClients = useCallback(async (): Promise<void> => {
-    await fetchClients(initialFilters);
+    // Réinitialiser le state de chargement et d'erreur
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Récupérer la liste à jour des clients
+      await fetchClients(initialFilters);
+    } catch {
+      // Gérer silencieusement l'erreur car fetchClients a déjà mis à jour l'état d'erreur
+      // L'erreur est déjà gérée par fetchClients
+    } finally {
+      setIsLoading(false);
+    }
   }, [fetchClients, initialFilters]);
 
   return {

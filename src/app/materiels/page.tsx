@@ -5,6 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { useMaterials } from '@/hooks/api/useMaterials';
+import { useFavorites } from '@/hooks/api/useFavorites';
+import { useAuth } from '@/contexts/AuthContext';
 import { MaterialSearchFilters, Materiel, MaterielType } from '@/types';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Button } from '@/components/ui/button';
@@ -12,10 +14,11 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Eye, Calendar, Loader2, AlertCircle } from 'lucide-react';
+import { Search, Eye, Calendar, Loader2, AlertCircle, Heart } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import Link from 'next/link';
-import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { ImageWithFallback } from '@/components/ui/image-with-fallback';
 
 // Types pour les filtres et tri
 interface SortOption {
@@ -54,11 +57,16 @@ export default function MaterielsPage() {
     clearError
   } = useMaterials();
 
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
   // État local pour les filtres et la recherche
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('ALL');
   const [sortBy, setSortBy] = useState('name_asc');
   const [currentFilters, setCurrentFilters] = useState<MaterialSearchFilters>({});
+  const [favoriteLoadingStates, setFavoriteLoadingStates] = useState<Record<string, boolean>>({});
 
   // Charger les matériels au montage du composant
   useEffect(() => {
@@ -88,7 +96,25 @@ export default function MaterielsPage() {
     await fetchMaterials(filters);
   };
 
-  // Fonction pour charger plus de matériels (pagination)
+  // Fonction pour gérer les favoris
+  const handleToggleFavorite = async (materielId: string, event: React.MouseEvent) => {
+    event.preventDefault(); // Empêcher la navigation vers la page de détail
+    event.stopPropagation();
+
+    if (!isAuthenticated) {
+      router.push(`/auth/login?redirect=/materiels`);
+      return;
+    }
+
+    try {
+      setFavoriteLoadingStates(prev => ({ ...prev, [materielId]: true }));
+      await toggleFavorite(materielId);
+    } catch (error) {
+      console.error('Erreur lors de la gestion du favori:', error);
+    } finally {
+      setFavoriteLoadingStates(prev => ({ ...prev, [materielId]: false }));
+    }
+  };
   const loadMore = async () => {
     const filters: MaterialSearchFilters = {
       ...currentFilters,
@@ -129,33 +155,47 @@ export default function MaterielsPage() {
   // Les fonctions de calcul de disponibilité ont été supprimées car elles ne sont plus utilisées
 
   // Composant pour une carte de matériel
-  const MaterialCard = ({ material }: { material: Materiel }) => (
-    <Card className="h-full flex flex-col group hover:shadow-lg transition-shadow duration-200">
-      <CardHeader className="p-0">
-        <div className="relative aspect-video overflow-hidden rounded-t-lg">
-          {material.images && material.images.length > 0 ? (
-            <Image
-              src={material.images[0]}
+  const MaterialCard = ({ material }: { material: Materiel }) => {
+    const isInFavorites = isFavorite(material.id);
+    const isLoadingFavorite = favoriteLoadingStates[material.id] || false;
+
+    return (
+      <Card className="h-full flex flex-col group hover:shadow-lg transition-shadow duration-200">
+        <CardHeader className="p-0">
+          <div className="relative aspect-video overflow-hidden rounded-t-lg">
+            <ImageWithFallback
+              src={material.images?.[0]}
               alt={material.name}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-200"
+              fallbackIcon="construction"
             />
-          ) : (
-            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-              <div className="text-gray-400 text-center">
-                <Calendar className="h-12 w-12 mx-auto mb-2" />
-                <p className="text-sm">Pas d&apos;image</p>
-              </div>
+            <div className="absolute top-2 right-2">
+              {getStatusBadge(material.status)}
             </div>
-          )}
-          <div className="absolute top-2 right-2">
-            {getStatusBadge(material.status)}
+            {/* Bouton favoris */}
+            <div className="absolute top-2 left-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8 w-8 p-0 bg-white/90 backdrop-blur-sm hover:bg-white"
+                onClick={(e) => handleToggleFavorite(material.id, e)}
+                disabled={isLoadingFavorite}
+              >
+                <Heart 
+                  className={`h-4 w-4 ${isInFavorites ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
+                />
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
       
       <CardContent className="flex-1 p-4">
-        <CardTitle className="text-lg mb-2 line-clamp-2">{material.name}</CardTitle>
+        <Link href={`/materiels/${material.id}`}>
+          <CardTitle className="text-lg mb-2 line-clamp-2 hover:text-primary transition-colors cursor-pointer">
+            {material.name}
+          </CardTitle>
+        </Link>
         <p className="text-sm text-gray-600 mb-3 line-clamp-3">{material.description}</p>
         
         <div className="space-y-2">
@@ -203,7 +243,8 @@ export default function MaterielsPage() {
         </div>
       </CardFooter>
     </Card>
-  );
+    );
+  };
 
   return (
     <PublicLayout>

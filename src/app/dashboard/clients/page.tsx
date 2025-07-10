@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useClients } from '@/hooks/api/useClients';
 import { DashboardLayout } from '@/components/dashboard/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,90 +28,52 @@ import {
   MapPin,
   Building,
   Users,
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
-
-interface Client {
-  id: number;
-  name: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  company?: string;
-  createdAt: string;
-  _count?: {
-    locations: number;
-  };
-}
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error] = useState<string | null>(null);
+  const { clients, fetchClients, isLoading, error } = useClients();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [filteredClients, setFilteredClients] = useState(clients);
 
-  // Mock data - in a real app, this would come from your API
+  // Charger les clients au montage
   useEffect(() => {
-    // Simulate API call
-    const mockClients: Client[] = [
-      {
-        id: 1,
-        name: "Jean Martin",
-        email: "jean.martin@entreprise-martin.fr",
-        phone: "+33 1 23 45 67 89",
-        address: "123 Rue de la Construction, 75001 Paris",
-        company: "Entreprise Martin",
-        createdAt: "2024-01-15T10:00:00Z",
-        _count: { locations: 12 }
-      },
-      {
-        id: 2,
-        name: "Sophie Dubois",
-        email: "sophie.dubois@btp-solutions.fr",
-        phone: "+33 1 98 76 54 32",
-        address: "456 Avenue du BTP, 69001 Lyon",
-        company: "BTP Solutions",
-        createdAt: "2024-01-10T14:30:00Z",
-        _count: { locations: 8 }
-      },
-      {
-        id: 3,
-        name: "Pierre Moreau",
-        email: "pierre.moreau@construction-moderne.fr",
-        phone: "+33 1 11 22 33 44",
-        address: "789 Boulevard des Travaux, 13001 Marseille",
-        company: "Construction Moderne",
-        createdAt: "2024-01-20T09:15:00Z",
-        _count: { locations: 5 }
-      }
-    ];
+    fetchClients();
+  }, [fetchClients]);
 
-    setTimeout(() => {
-      setClients(mockClients);
-      setLoading(false);
-    }, 1000);
-  }, []);
+  // Filtrer les clients selon la recherche
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredClients(clients);
+      return;
+    }
 
-  // Filter clients
-  const filteredClients = clients.filter(client => {
-    const searchLower = searchTerm.toLowerCase();
-    return client.name.toLowerCase().includes(searchLower) ||
-           client.email.toLowerCase().includes(searchLower) ||
-           (client.company && client.company.toLowerCase().includes(searchLower));
-  });
+    const filtered = clients.filter(client => {
+      const searchLower = searchTerm.toLowerCase();
+      return client.name.toLowerCase().includes(searchLower) ||
+             client.email.toLowerCase().includes(searchLower) ||
+             (client.company && client.company.toLowerCase().includes(searchLower));
+    });
+    
+    setFilteredClients(filtered);
+  }, [clients, searchTerm]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR');
+  const formatDate = (date: Date) => {
+    return format(date, 'dd/MM/yyyy', { locale: fr });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Chargement des clients...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Chargement des clients...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -124,7 +87,8 @@ export default function ClientsPage() {
           <div className="text-center">
             <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
             <p className="text-lg font-semibold text-red-600">{error}</p>
-            <Button onClick={() => window.location.reload()} className="mt-4">
+            <Button onClick={() => fetchClients()} className="mt-4">
+              <RefreshCw className="h-4 w-4 mr-2" />
               Réessayer
             </Button>
           </div>
@@ -224,25 +188,30 @@ export default function ClientsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {clients.filter(c => (c._count?.locations || 0) > 0).length}
+                {clients.filter(c => c.status === 'ACTIVE').length}
               </div>
               <p className="text-xs text-muted-foreground">
-                Avec locations en cours
+                Avec statut actif
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Locations totales</CardTitle>
+              <CardTitle className="text-sm font-medium">Nouveaux ce mois</CardTitle>
               <Badge className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {clients.reduce((sum, client) => sum + (client._count?.locations || 0), 0)}
+                {clients.filter(c => {
+                  const createdDate = new Date(c.createdAt);
+                  const now = new Date();
+                  return createdDate.getMonth() === now.getMonth() && 
+                         createdDate.getFullYear() === now.getFullYear();
+                }).length}
               </div>
               <p className="text-xs text-muted-foreground">
-                Toutes locations confondues
+                Inscriptions récentes
               </p>
             </CardContent>
           </Card>
@@ -333,8 +302,8 @@ export default function ClientsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">
-                          {client._count?.locations || 0} location{(client._count?.locations || 0) > 1 ? 's' : ''}
+                        <Badge variant={client.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                          {client.status === 'ACTIVE' ? 'Actif' : 'Inactif'}
                         </Badge>
                       </TableCell>
                       <TableCell>{formatDate(client.createdAt)}</TableCell>

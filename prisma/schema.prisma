@@ -28,6 +28,7 @@ model User {
   phone       String?
   company     String?
   address     String?
+  avatar      String?    // URL de l'avatar
   
   // Metadata
   createdAt   DateTime   @default(now())
@@ -401,6 +402,8 @@ enum MaterielType {
   NACELLE_TELESCOPIQUE
   COMPACTEUR
   PELLETEUSE
+  CHARIOT_ELEVATEUR
+  MARTEAU_PIQUEUR
   AUTRE
 }
 

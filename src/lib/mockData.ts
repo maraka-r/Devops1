@@ -1,8 +1,22 @@
 // Données mock pour le développement frontend
 // Utiliser en cas de non disponibilité des endpoints API
 
-import { Location, LocationStatus } from '@/types';
+import { LocationStatus } from '@/types';
 import { addDays, subDays } from 'date-fns';
+
+// Type mock pour les locations sans les contraintes Prisma Decimal
+interface MockLocation {
+  id: string;
+  materielId: string;
+  userId: string;
+  startDate: Date;
+  endDate: Date;
+  status: LocationStatus;
+  totalPrice: number; // Simplifié pour les mocks
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Générer des dates relatives par rapport à aujourd'hui
 const today = new Date();
@@ -12,7 +26,7 @@ const lastWeek = subDays(today, 7);
 const lastMonth = subDays(today, 30);
 
 // Mock locations pour les tests
-export const mockLocations: Location[] = [
+export const mockLocations: MockLocation[] = [
   {
     id: 'loc1',
     materielId: 'mat1',
@@ -20,7 +34,7 @@ export const mockLocations: Location[] = [
     startDate: lastWeek,
     endDate: tomorrow,
     status: LocationStatus.ACTIVE,
-    totalPrice: 2500 as any, // Decimal dans Prisma, mais number ici
+    totalPrice: 2500, // Simplifié pour les mocks
     notes: "Projet construction résidentielle",
     createdAt: lastMonth,
     updatedAt: lastMonth
@@ -32,7 +46,7 @@ export const mockLocations: Location[] = [
     startDate: today,
     endDate: nextWeek,
     status: LocationStatus.ACTIVE,
-    totalPrice: 3500 as any, // Decimal dans Prisma
+    totalPrice: 3500, // Simplifié pour les mocks
     notes: "Rénovation bâtiment commercial",
     createdAt: lastWeek,
     updatedAt: lastWeek
@@ -52,7 +66,7 @@ export const mockLocations: Location[] = [
 ];
 
 // Fonction pour récupérer les locations mock d'un matériel
-export function getMockLocationsByMaterielId(materielId: string): Location[] {
+export function getMockLocationsByMaterielId(materielId: string): MockLocation[] {
   return mockLocations.filter(loc => loc.materielId === materielId);
 }
 

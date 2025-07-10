@@ -11,11 +11,13 @@ import {
   Wrench, 
   FileText, 
   Users, 
+  User,
   Settings, 
   Menu, 
   BarChart3,
   Calendar,
-  Bell
+  Bell,
+  LogOut
 } from 'lucide-react';
 
 const navigation = [
@@ -26,7 +28,6 @@ const navigation = [
   { name: 'Calendrier', href: '/dashboard/calendar', icon: Calendar },
   { name: 'Rapports', href: '/dashboard/reports', icon: BarChart3 },
   { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
-  { name: 'Paramètres', href: '/dashboard/settings', icon: Settings },
 ];
 
 interface DashboardNavigationProps {
@@ -97,23 +98,60 @@ export function DashboardNavigation({ mobileOnly = false }: DashboardNavigationP
   return (
     <>
       {/* Desktop Navigation */}
-      <div className="hidden md:block w-64 bg-card border-r">
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-8">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Wrench className="h-4 w-4 text-primary-foreground" />
+      <div className="hidden md:block w-64 bg-card border-r fixed top-0 bottom-0 left-0 overflow-y-auto">
+        <div className="flex flex-col justify-between h-full p-6">
+          {/* Top section with logo and navigation */}
+          <div>
+            <div className="flex items-center gap-2 mb-8">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <Wrench className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Daga Maraka</h2>
+                <p className="text-sm text-muted-foreground">Gestion BTP</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold">Daga Maraka</h2>
-              <p className="text-sm text-muted-foreground">Gestion BTP</p>
-            </div>
+            
+            <nav className="space-y-2">
+              {navigation.map((item) => (
+                <NavLink key={item.name} item={item} />
+              ))}
+            </nav>
           </div>
           
-          <nav className="space-y-2">
-            {navigation.map((item) => (
-              <NavLink key={item.name} item={item} />
-            ))}
-          </nav>
+          {/* Bottom section with user info and actions */}
+          <div className="mt-auto pt-6 border-t">
+            <Link href="/dashboard/profile" className="block mb-4">
+              <div className="flex items-center gap-3 hover:bg-muted p-2 rounded-lg transition-colors">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <User className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-medium">Admin</p>
+                  <p className="text-sm text-muted-foreground">admin@dagamaraka.com</p>
+                </div>
+              </div>
+            </Link>
+            
+            <div className="space-y-2">
+              
+              <Link 
+                href="/dashboard/settings" 
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+              >
+                <Settings className="h-4 w-4" />
+                Paramètres
+              </Link>
+              
+              <Link 
+                href="/logout" 
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700"
+              >
+                <LogOut className="h-4 w-4" />
+                Déconnexion
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 

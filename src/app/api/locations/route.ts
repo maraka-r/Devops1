@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { createLocationSchema } from '@/lib/validation';
+import { withErrorHandler, withMethodValidation, withAuth } from '@/lib/middleware';
+import { compose } from '@/lib/middleware';
+import type { AuthenticatedRequest } from '@/lib/middleware';
 
 // GET /api/locations - Récupérer toutes les locations
 export async function GET(request: NextRequest) {
@@ -66,20 +69,18 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/locations - Créer une nouvelle location
-export async function POST(request: NextRequest) {
+const postHandler = async (req: AuthenticatedRequest): Promise<NextResponse> => {
   try {
-    // TODO: Vérifier l'authentification
-    const isAuthenticated = true; // Placeholder
-    const userId = 'user-id'; // Placeholder
+    const userId = req.user?.userId;
     
-    if (!isAuthenticated) {
+    if (!userId) {
       return NextResponse.json({
         success: false,
         error: 'Authentification requise'
       }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const validatedData = createLocationSchema.parse(body);
 
     // Vérifier la disponibilité du matériel
@@ -166,4 +167,13 @@ export async function POST(request: NextRequest) {
       error: 'Erreur lors de la création de la location'
     }, { status: 500 });
   }
-}
+};
+
+// Exports avec middleware pour l'authentification
+const postHandlerWithAuth = compose(
+  withErrorHandler,
+  (handler) => withMethodValidation(['POST'], handler),
+  withAuth
+)(postHandler);
+
+export { postHandlerWithAuth as POST };

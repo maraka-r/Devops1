@@ -41,7 +41,7 @@ export default function LouerMaterielPage() {
   const materielId = params.id as string;
 
   // Hooks pour l'authentification
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   // Hooks pour la gestion des matériels et locations
   const { getMaterial, isLoading: loadingMaterial, error: materialError } = useMaterials();
@@ -161,12 +161,35 @@ export default function LouerMaterielPage() {
     }
   }, [startDate, endDate, materiel]);
 
-  // Rediriger vers la connexion si pas authentifié (après le chargement)
+  // Remarque: La page est maintenant accessible à tous
+  // L'authentification n'est demandée qu'au moment de la soumission
+
+  // Restaurer les paramètres du formulaire depuis l'URL (après redirection depuis login)
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push(`/auth/login?redirect=/materiels/${materielId}/louer`);
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      const savedStartDate = urlParams.get('startDate');
+      const savedEndDate = urlParams.get('endDate');
+      const savedNotes = urlParams.get('notes');
+      
+      if (savedStartDate) {
+        setStartDate(new Date(savedStartDate));
+      }
+      if (savedEndDate) {
+        setEndDate(new Date(savedEndDate));
+      }
+      if (savedNotes) {
+        setNotes(savedNotes);
+      }
+      
+      // Nettoyer l'URL après avoir restauré les paramètres
+      if (savedStartDate || savedEndDate || savedNotes) {
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+      }
     }
-  }, [authLoading, isAuthenticated, router, materielId]);
+  }, []);
 
   // Validation du formulaire
   const validateForm = (): boolean => {
@@ -209,9 +232,17 @@ export default function LouerMaterielPage() {
       return;
     }
 
-    // Vérifier que l'utilisateur est authentifié
+    // Vérifier que l'utilisateur est authentifié au moment de la soumission
     if (!isAuthenticated || !user) {
-      router.push(`/auth/login?redirect=/materiels/${materielId}/louer`);
+      // Rediriger vers la page de connexion avec un paramètre de retour
+      const currentPath = `/materiels/${materielId}/louer`;
+      const queryParams = new URLSearchParams();
+      if (startDate) queryParams.set('startDate', startDate.toISOString());
+      if (endDate) queryParams.set('endDate', endDate.toISOString());
+      if (notes) queryParams.set('notes', notes);
+      
+      const redirectUrl = `${currentPath}?${queryParams.toString()}`;
+      router.push(`/auth/login?redirect=${encodeURIComponent(redirectUrl)}`);
       return;
     }
 
@@ -536,6 +567,22 @@ export default function LouerMaterielPage() {
                       <span className="font-bold text-xl text-primary">
                         {formatPrice(totalPrice)}
                       </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Information pour les utilisateurs non authentifiés */}
+                {!isAuthenticated && (
+                  <div className="bg-blue-50 border border-blue-200 text-blue-700 p-4 rounded-md">
+                    <div className="flex">
+                      <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Connexion requise</p>
+                        <p className="text-sm">
+                          Vous devrez vous connecter ou créer un compte pour finaliser votre réservation.
+                          Vos sélections seront conservées.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}

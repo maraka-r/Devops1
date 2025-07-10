@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLocations } from '@/hooks/api/useLocations';
-import { LocationWithDetails, LocationStatus } from '@/types';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { useReservations } from '@/hooks/api/useReservations';
+import { LocationStatus } from '@/types';
+import { DashboardLayout } from '@/components/dashboard/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +28,7 @@ import { formatPrice } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Link from 'next/link';
-import Image from 'next/image';
+import { ImageWithFallback } from '@/components/ui/image-with-fallback';
 
 // Fonction pour obtenir le style du badge selon le statut
 const getStatusBadge = (status: LocationStatus) => {
@@ -45,47 +45,47 @@ const getStatusBadge = (status: LocationStatus) => {
 
 export default function MesReservationsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { locationsWithDetails, fetchLocationsWithDetails, isLoading, error } = useLocations();
+  const { reservations, fetchReservations, isLoading, error } = useReservations();
 
   // État local
-  const [filteredLocations, setFilteredLocations] = useState<LocationWithDetails[]>([]);
+  const [filteredReservations, setFilteredReservations] = useState(reservations);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<LocationStatus | 'ALL'>('ALL');
 
   // Charger les réservations de l'utilisateur
   useEffect(() => {
-    const loadUserLocations = async () => {
+    const loadUserReservations = async () => {
       if (!isAuthenticated || !user) return;
 
       try {
-        await fetchLocationsWithDetails({ userId: user.id });
+        await fetchReservations({ userId: user.id });
       } catch (err) {
         console.error('Erreur lors du chargement des réservations:', err);
       }
     };
 
-    loadUserLocations();
-  }, [isAuthenticated, user, fetchLocationsWithDetails]);
+    loadUserReservations();
+  }, [isAuthenticated, user, fetchReservations]);
 
   // Filtrer les réservations selon la recherche et le statut
   useEffect(() => {
-    let filtered = locationsWithDetails;
+    let filtered = reservations;
 
     // Filtrer par terme de recherche
     if (searchTerm) {
-      filtered = filtered.filter(location =>
-        location.materiel?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        location.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(reservation =>
+        reservation.materiel?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        reservation.notes?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Filtrer par statut
     if (statusFilter !== 'ALL') {
-      filtered = filtered.filter(location => location.status === statusFilter);
+      filtered = filtered.filter(reservation => reservation.status === statusFilter);
     }
 
-    setFilteredLocations(filtered);
-  }, [locationsWithDetails, searchTerm, statusFilter]);
+    setFilteredReservations(filtered);
+  }, [reservations, searchTerm, statusFilter]);
 
   // Rediriger si pas authentifié
   if (!authLoading && !isAuthenticated) {
@@ -188,7 +188,7 @@ export default function MesReservationsPage() {
         </Card>
 
         {/* Liste des réservations */}
-        {filteredLocations.length === 0 ? (
+        {filteredReservations.length === 0 ? (
           <Card>
             <CardContent className="pt-12 pb-12 text-center">
               <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -210,35 +210,35 @@ export default function MesReservationsPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {filteredLocations.map((location) => {
-              const statusConfig = getStatusBadge(location.status);
+            {filteredReservations.map((reservation) => {
+              const statusConfig = getStatusBadge(reservation.status);
               const StatusIcon = statusConfig.icon;
 
               return (
-                <Card key={location.id} className="hover:shadow-md transition-shadow">
+                <Card key={reservation.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="pt-6">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       {/* Informations principales */}
                       <div className="flex-1">
                         <div className="flex items-start gap-4">
                           {/* Image du matériel */}
-                          {location.materiel?.images?.[0] && (
-                            <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                              <Image
-                                src={location.materiel.images[0]}
-                                alt={location.materiel.name}
-                                width={64}
-                                height={64}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          )}
+                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                            <ImageWithFallback
+                              src={reservation.materiel?.images?.[0]}
+                              alt={reservation.materiel?.name || 'Matériel'}
+                              width={64}
+                              height={64}
+                              className="w-full h-full object-cover"
+                              fallbackIcon="construction"
+                              size="small"
+                            />
+                          </div>
 
                           {/* Détails */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="font-semibold text-gray-900 truncate">
-                                {location.materiel?.name || 'Matériel inconnu'}
+                                {reservation.materiel?.name || 'Matériel inconnu'}
                               </h3>
                               <Badge variant={statusConfig.variant} className="flex-shrink-0">
                                 <StatusIcon className="h-3 w-3 mr-1" />
@@ -249,20 +249,20 @@ export default function MesReservationsPage() {
                             <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-600">
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-4 w-4" />
-                                {format(new Date(location.startDate), 'dd MMM yyyy', { locale: fr })} - {format(new Date(location.endDate), 'dd MMM yyyy', { locale: fr })}
+                                {format(new Date(reservation.startDate), 'dd MMM yyyy', { locale: fr })} - {format(new Date(reservation.endDate), 'dd MMM yyyy', { locale: fr })}
                               </div>
                               
                               <div className="hidden sm:block text-gray-300">•</div>
                               
                               <div className="flex items-center gap-1 font-medium text-primary">
                                 <Euro className="h-4 w-4" />
-                                {formatPrice(Number(location.totalPrice))}
+                                {formatPrice(Number(reservation.totalPrice))}
                               </div>
                             </div>
 
-                            {location.notes && (
+                            {reservation.notes && (
                               <p className="mt-2 text-sm text-gray-600 truncate">
-                                {location.notes}
+                                {reservation.notes}
                               </p>
                             )}
                           </div>
@@ -272,13 +272,13 @@ export default function MesReservationsPage() {
                       {/* Actions */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={`/dashboard/reservations/${location.id}`}>
+                          <Link href={`/dashboard/reservations/${reservation.id}`}>
                             <Eye className="h-4 w-4 mr-2" />
                             Voir
                           </Link>
                         </Button>
                         
-                        {location.status === 'PENDING' && (
+                        {reservation.status === 'PENDING' && (
                           <Button variant="outline" size="sm">
                             <Edit3 className="h-4 w-4 mr-2" />
                             Modifier
@@ -298,7 +298,7 @@ export default function MesReservationsPage() {
         )}
 
         {/* Action flottante pour nouvelle réservation */}
-        {filteredLocations.length > 0 && (
+        {filteredReservations.length > 0 && (
           <div className="fixed bottom-6 right-6">
             <Button asChild size="lg" className="rounded-full shadow-lg">
               <Link href="/materiels">
