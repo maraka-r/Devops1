@@ -8,6 +8,7 @@ import {
   TestimonialsSection,
   ContactSection
 } from '@/components/sections';
+import RoleBasedRedirect from '@/components/auth/RoleBasedRedirect';
 
 // Metadata SEO spécifiques à la page d'accueil
 export const metadata: Metadata = {
@@ -181,6 +182,9 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      
+      {/* Redirection automatique selon le rôle utilisateur */}
+      <RoleBasedRedirect />
       
       <MainLayout>
         {/* Section Hero - Always Above the Fold */}
