@@ -12,6 +12,40 @@ Ce projet est une application fullstack qui comprend :
 - **CI/CD** : GitHub Actions pour déploiement sur AWS EC2 (build direct sur EC2)
 - **Monitoring** : Grafana et Prometheus
 
+## 🎯 Fonctionnalités principales
+
+- ✅ Dashboard administrateur avec sidebar fixe et navigation intuitive
+- ✅ Gestion des utilisateurs, matériels, locations et factures
+- ✅ Système d'authentification JWT avec logout automatique
+- ✅ API REST complète avec middleware CORS
+- ✅ Scripts de seed automatiques pour dev et production
+- ✅ Interface responsive et moderne
+- ✅ Système de notifications en temps réel
+- ✅ Monitoring avec Prometheus et Grafana
+
+## 🔧 Corrections récentes
+
+### ✅ UI/UX Dashboard
+- Unification du layout admin avec sidebar fixe
+- Correction des hooks API avec typage strict
+- Amélioration de la pagination et gestion des erreurs
+- Correction du composant calendar (react-day-picker v9)
+
+### ✅ Système d'authentification
+- Ajout d'une page `/logout` dédiée
+- Correction du bouton de déconnexion dans la sidebar
+- Gestion automatique de la redirection après logout
+
+### ✅ Résolution CORS
+- Ajout d'un middleware Next.js global pour CORS
+- Configuration automatique des URLs en production
+- Support des méthodes OPTIONS pour les requêtes preflight
+
+### ✅ Scripts Prisma
+- Correction du script de seed avec typage strict
+- Génération automatique du client Prisma
+- Intégration dans le workflow de déploiement
+
 ## 🚀 Guide de démarrage
 
 ### Prérequis
@@ -146,6 +180,7 @@ Le déploiement est automatisé via GitHub Actions. Lorsque vous poussez du code
 3. Transfert des fichiers vers EC2
 4. Construction de l'image Docker directement sur EC2
 5. Démarrage des services avec Docker Compose
+6. **Exécution automatique du seed de données**
 
 ### Configuration du déploiement
 
@@ -159,6 +194,74 @@ Pour configurer le déploiement, vous devez :
 2. Configurer l'instance EC2 avec Docker et Docker Compose
 
 3. Configurer les variables d'environnement sur l'instance EC2
+
+## 🌐 Configuration Production
+
+### Variables d'environnement importantes pour la production
+
+**Remplacez ces valeurs dans votre `.env` sur le serveur de production :**
+
+```bash
+# API Configuration - Important pour CORS
+NEXT_PUBLIC_API_URL=https://votre-domaine.com/api
+# Ou laissez vide pour utiliser l'URL relative automatique
+
+# Authentification - Utilisez des valeurs sécurisées
+NEXTAUTH_SECRET=votre-secret-production-tres-securise
+NEXTAUTH_URL=https://votre-domaine.com
+JWT_SECRET=votre-jwt-secret-production-tres-securise
+
+# Mode production
+NODE_ENV=production
+
+# Base de données production (RDS recommandé)
+DB_HOST=votre-endpoint-rds.région.rds.amazonaws.com
+DB_PORT=5432
+DB_NAME=maraka_production
+DB_USER=maraka_user
+DB_PASSWORD=mot-de-passe-securise
+```
+
+### 🔧 Résolution des problèmes CORS
+
+L'application inclut un **middleware CORS automatique** qui :
+
+- ✅ Gère les requêtes `OPTIONS` (preflight)
+- ✅ Configure les en-têtes CORS appropriés
+- ✅ Utilise l'URL relative en production (`/api`) pour éviter les problèmes cross-origin
+
+**En production :** L'API URL est automatiquement configurée comme `${window.location.origin}/api`
+
+### 🌱 Seed automatique
+
+Le workflow de déploiement exécute automatiquement :
+
+```bash
+npm run db:seed
+```
+
+Cela crée les données de test suivantes :
+- 👥 **7 utilisateurs** (1 admin + 1 employé + 5 clients)
+- 🏗️ **11 matériels** de différentes catégories
+- 📅 **8 locations** avec historique
+- ❤️ **5 favoris** pour tester les préférences
+- 💰 **2 factures** pour les tests de facturation
+- 🔔 **4 notifications** pour tester les alertes
+
+**Comptes de test par défaut :**
+- **Admin :** `admin@maraka.fr` / `password123`
+- **Employé :** `employe@maraka.fr` / `password123`
+- **Client :** `jean.martin@entreprise-martin.fr` / `password123`
+
+### 🔒 Sécurité Production
+
+**Avant de mettre en production :**
+
+1. **Changez tous les mots de passe par défaut**
+2. **Utilisez des secrets JWT/NextAuth forts et uniques**
+3. **Configurez HTTPS avec un certificat SSL**
+4. **Activez le firewall et limitez les ports exposés**
+5. **Configurez des backups automatiques de la base de données**
 
 ## 💰 Variables d'environnement
 
@@ -237,4 +340,20 @@ Pour modifier le schéma de la base de données :
 2. **Variables sensibles** : Ne stockez jamais de secrets directement dans les fichiers de configuration. Utilisez toujours les variables d'environnement ou les secrets GitHub.
 
 3. **Monitoring** : La configuration actuelle est complète mais peut être simplifiée si tous les exporters ne sont pas nécessaires.
+
+## 🚀 Configuration de production
+
+Pour la configuration de production, assurez-vous de :
+
+1. Utiliser des variables d'environnement sécurisées pour toutes les clés et mots de passe sensibles.
+2. Configurer correctement le groupe de sécurité de l'instance EC2 pour n'autoriser que le trafic nécessaire.
+3. Mettre en place des sauvegardes automatiques pour la base de données RDS.
+4. Surveiller les logs d'application et de serveur pour détecter toute activité suspecte.
+
+## 🛡️ Sécurité
+
+1. **Mises à jour régulières** : Assurez-vous que toutes les dépendances et l'instance EC2 sont régulièrement mises à jour avec les derniers correctifs de sécurité.
+2. **Pare-feu** : Utilisez le pare-feu AWS (Security Groups) pour contrôler l'accès à votre instance EC2.
+3. **SSL/TLS** : Configurez SSL/TLS pour sécuriser les communications entre le client et le serveur.
+4. **Sauvegardes** : Effectuez des sauvegardes régulières de votre base de données et de votre application.
 

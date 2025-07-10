@@ -131,12 +131,17 @@ jobs:
             docker stop app-app-1 || true
             docker rm -f app-app-1 || true
             docker-compose up -d app
-            # docker exec app-app-1 npx prisma db push
+            
+            # Attendre que le conteneur soit prêt
+            sleep 15
 
             # Injection des variables d'environnement
             echo "🔧 Injection des variables d'environnement..."
-            sleep 10  # Attendre que le conteneur soit prêt
             ./scripts/sync-env.sh app-app-1
+
+            # Attendre que la base de données soit prête et exécuter le seed
+            echo "🌱 Exécution du seed de la base de données..."
+            docker exec app-app-1 npm run db:seed
 
             # Nettoyage images non utilisées
             docker image prune -f

@@ -46,6 +46,19 @@ async function main() {
     },
   });
 
+    await prisma.user.create({
+    data: {
+      email: 'admin2@maraka.fr',
+      password: passwordHash,
+      name: 'Administrateur Maraka',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      phone: '+33 1 23 45 67 89',
+      company: 'Maraka SAS',
+      address: '123 Avenue de la Construction, 75001 Paris',
+    },
+  });
+
   // Employé
   const employee = await prisma.user.create({
     data: {
@@ -684,7 +697,7 @@ async function main() {
         theme: 'light',
       },
     }),
-    ...clients.map(client => 
+    ...clients.map((client) => 
       prisma.userSettings.create({
         data: {
           userId: client.id,
