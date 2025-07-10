@@ -127,6 +127,22 @@ export const withMethodValidation = (
   handler: (req: NextRequest) => Promise<NextResponse>
 ) => {
   return async (req: NextRequest): Promise<NextResponse> => {
+    // Ignorer les requêtes OPTIONS pour CORS (gérées séparément)
+    if (req.method === 'OPTIONS') {
+      return NextResponse.json(
+        null,
+        { 
+          status: 200,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': allowedMethods.concat(['OPTIONS']).join(', '),
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Max-Age': '86400',
+          }
+        }
+      );
+    }
+    
     if (!allowedMethods.includes(req.method)) {
       return NextResponse.json(
         { success: false, error: `Méthode ${req.method} non autorisée` },

@@ -93,4 +93,4 @@ const handler = compose(
   (handler) => withMethodValidation(['POST'], handler)
 )(registerHandler);
 
-export { handler as POST };
+export { handler as POST, handler as OPTIONS };

@@ -2,9 +2,10 @@
 // Gestion des appels HTTP, authentification, erreurs
 
 import { ApiResponse } from '@/types';
+import { getApiBaseUrl } from './config';
 
 // Configuration de base de l'API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = getApiBaseUrl();
 
 // Types pour les options de requête
 interface RequestOptions extends RequestInit {
