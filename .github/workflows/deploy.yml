@@ -131,6 +131,7 @@ jobs:
             docker-compose down || true
             docker rm -f app-app-1 || true
             docker-compose up -d
+            docker exec app-app-1 npx prisma db push
 
             # Injection des variables d'environnement
             echo "🔧 Injection des variables d'environnement..."
