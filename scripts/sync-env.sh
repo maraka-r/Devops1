@@ -78,14 +78,14 @@ else
   exit 1
 fi
 
-# 4. Vérification
-echo "🔍 Vérification des variables chargées:"
-sleep 5
+# # 4. Vérification
+# echo "🔍 Vérification des variables chargées:"
+# sleep 5
 
-echo "✅ Variables importantes:"
-docker exec "$CONTAINER_NAME" sh -c 'echo "DATABASE_URL: $DATABASE_URL"'
-docker exec "$CONTAINER_NAME" sh -c 'echo "DB_HOST: $DB_HOST"'
-docker exec "$CONTAINER_NAME" sh -c 'echo "NODE_ENV: $NODE_ENV"'
+# echo "✅ Variables importantes:"
+# docker exec "$CONTAINER_NAME" sh -c 'echo "DATABASE_URL: $DATABASE_URL"'
+# docker exec "$CONTAINER_NAME" sh -c 'echo "DB_HOST: $DB_HOST"'
+# docker exec "$CONTAINER_NAME" sh -c 'echo "NODE_ENV: $NODE_ENV"'
 
 # 5. Test de connexion DB
 echo "🗄️ Test de connexion base de données:"

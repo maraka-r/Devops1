@@ -129,6 +129,7 @@ jobs:
 
             # Lancer docker-compose
             docker-compose down || true
+            docker rm -f app-app-1 || true
             docker-compose up -d
 
             # Injection des variables d'environnement
