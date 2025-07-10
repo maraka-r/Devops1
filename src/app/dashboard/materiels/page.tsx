@@ -31,7 +31,7 @@ import {
 import { useMaterials } from '@/hooks/api/useMaterials';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { formatCurrency } from '@/lib/utils';
-import { Materiel, MaterielStatus } from '@/types';
+import { Materiel, MaterielStatus, MaterielType } from '@/types';
 
 const statusColors = {
   AVAILABLE: 'default',
@@ -66,6 +66,18 @@ function MaterielsContent() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
+  // État pour le formulaire d'ajout de matériel
+  const [formData, setFormData] = useState({
+    name: '',
+    reference: '',
+    type: '',
+    description: '',
+    pricePerDay: 0,
+  });
+
+  // Ajout d'un état pour les messages de notification
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  
   // Utilisation du hook useMaterials pour la gestion des données
   const {
     materials,
@@ -73,8 +85,70 @@ function MaterielsContent() {
     error,
     fetchMaterials,
     clearError,
-    refreshMaterials
+    refreshMaterials,
+    createMaterial
   } = useMaterials();
+
+  // Fonction pour gérer l'ajout d'un matériel
+  const handleAddMaterial = async () => {
+    try {
+      // Validation de base
+      if (!formData.name || !formData.type || formData.pricePerDay <= 0) {
+        return;
+      }
+
+      // Préparation des données pour l'API
+      const materialData = {
+        name: formData.name,
+        type: formData.type as MaterielType,
+        description: formData.description || undefined,
+        pricePerDay: formData.pricePerDay,
+        // La référence n'est pas dans le schema, mais on pourrait l'ajouter comme metadata
+        specifications: formData.reference ? { reference: formData.reference } : undefined,
+        // Le statut par défaut est AVAILABLE
+      };
+
+      // Appel de l'API via le hook
+      await createMaterial(materialData);
+      
+      // Réinitialisation du formulaire
+      setFormData({
+        name: '',
+        reference: '',
+        type: '',
+        description: '',
+        pricePerDay: 0,
+      });
+      
+      // Fermeture du popup
+      setIsDialogOpen(false);
+      
+      // Affichage d'une notification de succès
+      setNotification({
+        message: 'Matériel ajouté avec succès',
+        type: 'success'
+      });
+      
+      // Effacement de la notification après 3 secondes
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+      
+      // Rafraîchissement de la liste des matériels
+      await refreshMaterials();
+    } catch (err) {
+      // Affichage d'une notification d'erreur
+      setNotification({
+        message: err instanceof Error ? err.message : "Erreur lors de l'ajout du matériel",
+        type: 'error'
+      });
+      
+      // Effacement de la notification après 3 secondes
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+    }
+  };
 
   // Chargement initial des matériels
   useEffect(() => {
@@ -156,6 +230,23 @@ function MaterielsContent() {
               Gestion de votre parc de matériel BTP
             </p>
           </div>
+
+          {/* Notification */}
+          {notification && (
+            <div className={`fixed top-4 right-4 p-4 rounded-md shadow-md z-50 ${
+              notification.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+              <div className="flex items-center">
+                {notification.type === 'success' ? (
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 mr-2" />
+                )}
+                <p>{notification.message}</p>
+              </div>
+            </div>
+          )}
+
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -175,44 +266,84 @@ function MaterielsContent() {
                   <Label htmlFor="name" className="text-right">
                     Nom
                   </Label>
-                  <Input id="name" className="col-span-3" placeholder="Ex: Pelleteuse CAT 320" />
+                  <Input 
+                    id="name" 
+                    className="col-span-3" 
+                    placeholder="Ex: Pelleteuse CAT 320" 
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="reference" className="text-right">
                     Référence
                   </Label>
-                  <Input id="reference" className="col-span-3" placeholder="Ex: PEL-001" />
+                  <Input 
+                    id="reference" 
+                    className="col-span-3" 
+                    placeholder="Ex: PEL-001" 
+                    value={formData.reference}
+                    onChange={(e) => setFormData({...formData, reference: e.target.value})}
+                  />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="category" className="text-right">
                     Catégorie
                   </Label>
-                  <Select>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value) => setFormData({...formData, type: value})}
+                  >
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Sélectionner une catégorie" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="TERRASSEMENT">Terrassement</SelectItem>
-                      <SelectItem value="LEVAGE">Levage</SelectItem>
-                      <SelectItem value="TRANSPORT">Transport</SelectItem>
-                      <SelectItem value="COMPACTAGE">Compactage</SelectItem>
-                      <SelectItem value="BETONNAGE">Bétonnage</SelectItem>
+                      <SelectItem value="GRUE_MOBILE">Grue mobile</SelectItem>
+                      <SelectItem value="GRUE_TOUR">Grue tour</SelectItem>
+                      <SelectItem value="TELESCOPIQUE">Télescopique</SelectItem>
+                      <SelectItem value="NACELLE_CISEAUX">Nacelle ciseaux</SelectItem>
+                      <SelectItem value="NACELLE_ARTICULEE">Nacelle articulée</SelectItem>
+                      <SelectItem value="NACELLE_TELESCOPIQUE">Nacelle télescopique</SelectItem>
+                      <SelectItem value="COMPACTEUR">Compacteur</SelectItem>
+                      <SelectItem value="PELLETEUSE">Pelleteuse</SelectItem>
                       <SelectItem value="AUTRE">Autre</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="description" className="text-right">
+                    Description
+                  </Label>
+                  <Input 
+                    id="description" 
+                    className="col-span-3" 
+                    placeholder="Description du matériel" 
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="pricePerDay" className="text-right">
                     Prix/jour (€)
                   </Label>
-                  <Input id="pricePerDay" type="number" className="col-span-3" placeholder="150" />
+                  <Input 
+                    id="pricePerDay" 
+                    type="number" 
+                    className="col-span-3" 
+                    placeholder="150"
+                    value={formData.pricePerDay}
+                    onChange={(e) => setFormData({...formData, pricePerDay: Number(e.target.value)})}
+                  />
                 </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Annuler
                 </Button>
-                <Button onClick={() => setIsDialogOpen(false)}>
+                <Button 
+                  onClick={handleAddMaterial}
+                  disabled={!formData.name || !formData.type || formData.pricePerDay <= 0}
+                >
                   Ajouter
                 </Button>
               </div>

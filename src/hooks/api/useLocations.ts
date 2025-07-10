@@ -151,6 +151,10 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRet
         if (response.success && response.data) {
           // Ajouter la nouvelle location à la liste
           setLocations(prev => [response.data!, ...prev]);
+          
+          // On doit aussi récupérer les locations avec détails pour mettre à jour l'interface
+          // Mais comme on ne dispose pas des détails complets ici, on va plutôt forcer un rafraîchissement
+          // dans la fonction handleCreateLocation du composant
           return response.data;
         } else {
           throw new ApiError(response.error || 'Erreur lors de la création', 400);
@@ -368,7 +372,8 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRet
   // Fonction pour rafraîchir les locations
   const refreshLocations = useCallback(async (): Promise<void> => {
     await fetchLocations(initialFilters);
-  }, [fetchLocations, initialFilters]);
+    await fetchLocationsWithDetails(initialFilters);
+  }, [fetchLocations, fetchLocationsWithDetails, initialFilters]);
 
   return {
     // État
