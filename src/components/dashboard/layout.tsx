@@ -3,6 +3,8 @@
 import { DashboardNavigation } from '@/components/dashboard/navigation';
 import { Button } from '@/components/ui/button-btp';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -18,6 +20,18 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { logout } = useAuth();
+  const router = useRouter();
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
+  };
+  
   return (
     <div className="min-h-screen bg-background">
       <div className="flex">
@@ -59,7 +73,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       </DropdownMenuItem>
                     </Link>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-600">
+                    <DropdownMenuItem 
+                      className="text-red-600"
+                      onClick={handleLogout}
+                    >
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Déconnexion</span>
                     </DropdownMenuItem>

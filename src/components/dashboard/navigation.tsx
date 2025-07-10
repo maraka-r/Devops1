@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   Home, 
   Wrench, 
@@ -36,7 +37,18 @@ interface DashboardNavigationProps {
 
 export function DashboardNavigation({ mobileOnly = false }: DashboardNavigationProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
+  };
 
   const NavLink = ({ item, mobile = false }: { item: typeof navigation[0], mobile?: boolean }) => {
     const isActive = pathname === item.href;
@@ -143,13 +155,14 @@ export function DashboardNavigation({ mobileOnly = false }: DashboardNavigationP
                 Paramètres
               </Link>
               
-              <Link 
-                href="/logout" 
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700"
+              <Button 
+                onClick={handleLogout}
+                variant="ghost"
+                className="flex w-full items-center gap-2 px-3 py-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 justify-start"
               >
                 <LogOut className="h-4 w-4" />
                 Déconnexion
-              </Link>
+              </Button>
             </div>
           </div>
         </div>
