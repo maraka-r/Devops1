@@ -25,6 +25,9 @@ docker stop "$CONTAINER_NAME"
 echo "🔧 Correction du fichier .env..."
 TEMP_ENV="/tmp/resolved.env"
 
+# Liste des variables sensibles à masquer
+SENSITIVE_VARS=("PASSWORD" "SECRET" "TOKEN" "KEY" "PRIVATE")
+
 # Créer un fichier .env avec les variables résolues
 while IFS='=' read -r key value; do
   # Ignore commentaires et lignes vides
@@ -51,7 +54,25 @@ while IFS='=' read -r key value; do
   fi
   
   echo "$key=$value" >> "$TEMP_ENV"
-  echo "→ $key=$value"
+  
+  # Masquer les valeurs sensibles dans les logs
+  is_sensitive=false
+  for sensitive in "${SENSITIVE_VARS[@]}"; do
+    if [[ "$key" == *"$sensitive"* ]]; then
+      is_sensitive=true
+      break
+    fi
+  done
+  
+  # Cas spécial pour DATABASE_URL qui contient des credentials
+  if [[ "$key" == "DATABASE_URL" || "$key" == "NEXTAUTH_URL" ]]; then
+    masked_value=$(echo "$value" | sed 's/:\/\/[^:]*:[^@]*@/:\/\/***:***@/g' | sed 's/\/\/[^@]*@/\/\/***@/g')
+    echo "→ $key=$masked_value"
+  elif [ "$is_sensitive" = true ]; then
+    echo "→ $key=***[MASKED]***"
+  else
+    echo "→ $key=$value"
+  fi
 done < "$ENV_FILE"
 
 # 3. Redémarrer le conteneur avec les nouvelles variables
@@ -78,14 +99,16 @@ else
   exit 1
 fi
 
-# # 4. Vérification
-# echo "🔍 Vérification des variables chargées:"
-# sleep 5
+# 4. Vérification
+echo "🔍 Vérification des variables chargées:"
+sleep 5
 
-# echo "✅ Variables importantes:"
-# docker exec "$CONTAINER_NAME" sh -c 'echo "DATABASE_URL: $DATABASE_URL"'
-# docker exec "$CONTAINER_NAME" sh -c 'echo "DB_HOST: $DB_HOST"'
-# docker exec "$CONTAINER_NAME" sh -c 'echo "NODE_ENV: $NODE_ENV"'
+echo "✅ Variables importantes:"
+docker exec "$CONTAINER_NAME" sh -c 'echo "DATABASE_URL: $(echo $DATABASE_URL | sed "s/:\/\/[^:]*:[^@]*@/:\/\/***:***@/g")"'
+docker exec "$CONTAINER_NAME" sh -c 'echo "DB_HOST: $DB_HOST"'
+docker exec "$CONTAINER_NAME" sh -c 'echo "NODE_ENV: $NODE_ENV"'
+docker exec "$CONTAINER_NAME" sh -c 'echo "NEXTAUTH_SECRET: ***[MASKED]***"'
+docker exec "$CONTAINER_NAME" sh -c 'echo "JWT_SECRET: ***[MASKED]***"'
 
 # 5. Test de connexion DB
 echo "🗄️ Test de connexion base de données:"

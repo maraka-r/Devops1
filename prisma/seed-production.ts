@@ -33,7 +33,7 @@ async function main() {
   const passwordHash = await bcrypt.hash('password123', 10);
 
   // Admin principal
-  const admin = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'admin@maraka.fr' },
     update: {
       password: passwordHash,
@@ -75,7 +75,7 @@ async function main() {
   });
 
   // Employé
-  const employee = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'employe@maraka.fr' },
     update: {
       password: passwordHash,
@@ -173,7 +173,7 @@ async function main() {
       prisma.materiel.create({
         data: {
           name: 'Grue mobile 25 tonnes',
-          type: 'GRUE',
+          type: 'GRUE_MOBILE',
           description: 'Grue mobile hydraulique 25T, flèche télescopique 30m, idéale pour chantiers urbains',
           pricePerDay: 350.00,
           status: 'AVAILABLE',
@@ -191,7 +191,7 @@ async function main() {
       prisma.materiel.create({
         data: {
           name: 'Grue mobile 50 tonnes',
-          type: 'GRUE',
+          type: 'GRUE_MOBILE',
           description: 'Grue mobile tout-terrain 50T, portée maximale 52m, parfaite pour gros œuvres',
           pricePerDay: 550.00,
           status: 'AVAILABLE',
@@ -247,7 +247,7 @@ async function main() {
       prisma.materiel.create({
         data: {
           name: 'Nacelle articulée 16m',
-          type: 'NACELLE',
+          type: 'NACELLE_ARTICULEE',
           description: 'Nacelle automotrice articulée 16m, plateforme 2 personnes, batterie lithium',
           pricePerDay: 120.00,
           status: 'AVAILABLE',
@@ -265,7 +265,7 @@ async function main() {
       prisma.materiel.create({
         data: {
           name: 'Nacelle ciseaux 10m électrique',
-          type: 'NACELLE',
+          type: 'NACELLE_CISEAUX',
           description: 'Nacelle à ciseaux électrique 10m, plateforme XXL, idéale intérieur',
           pricePerDay: 85.00,
           status: 'AVAILABLE',
@@ -303,7 +303,7 @@ async function main() {
       prisma.materiel.create({
         data: {
           name: 'Bulldozer D6 Caterpillar',
-          type: 'BULLDOZER',
+          type: 'AUTRE',
           description: 'Bulldozer sur chenilles D6, lame droite, ripper arrière, cabine ROPS',
           pricePerDay: 680.00,
           status: 'AVAILABLE',
@@ -322,7 +322,7 @@ async function main() {
       prisma.materiel.create({
         data: {
           name: 'Pelle hydraulique 20T',
-          type: 'EXCAVATEUR',
+          type: 'PELLETEUSE',
           description: 'Excavateur sur chenilles 20T, bras long, godet 1m³, rotation 360°',
           pricePerDay: 320.00,
           status: 'AVAILABLE',
@@ -341,7 +341,7 @@ async function main() {
       prisma.materiel.create({
         data: {
           name: 'Camion-benne 19T',
-          type: 'CAMION',
+          type: 'AUTRE',
           description: 'Camion-benne 3 essieux 19T, benne alu, hayon hydraulique, permis C',
           pricePerDay: 280.00,
           status: 'AVAILABLE',

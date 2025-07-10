@@ -57,7 +57,7 @@ async function main() {
     },
   });
 
-  const admin2 = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'admin2@maraka.fr' },
     update: {
       password: passwordHash,
@@ -81,7 +81,7 @@ async function main() {
   });
 
   // Employé
-  const employee = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'employe@maraka.fr' },
     update: {
       password: passwordHash,
@@ -151,7 +151,7 @@ async function main() {
     },
   });
 
-  const client3 = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'pierre.moreau@construction-moderne.fr' },
     update: {
       password: passwordHash,
@@ -174,7 +174,7 @@ async function main() {
     },
   });
 
-  const client4 = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'lucie.petit@renovation-pro.fr' },
     update: {
       password: passwordHash,
@@ -197,7 +197,7 @@ async function main() {
     },
   });
 
-  const client5 = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'marc.durand@travaux-publics.fr' },
     update: {
       password: passwordHash,
