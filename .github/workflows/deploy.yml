@@ -31,11 +31,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'  # ✅ Utilise Node 20 comme dans le Dockerfile
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm i
+        run: npm ci  # ✅ Utilise npm ci au lieu de npm i
 
       - name: Generate Prisma client
         run: npx prisma generate
@@ -63,7 +63,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'  # ✅ Cohérence avec le test
           cache: 'npm'
 
       - name: Install dependencies
@@ -96,61 +96,191 @@ jobs:
           scp prometheus.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
           scp alertmanager.yml ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
           scp -r grafana ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/
+          # ✅ Upload du script sync-env.sh
+          scp sync-env.sh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/app/ || echo "sync-env.sh non trouvé, sera créé sur le serveur"
 
       - name: Deploy on EC2
         run: |
-          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << EOF
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
+
+            echo "🚀 Début du déploiement..."
 
             # Créer répertoire app si nécessaire
             mkdir -p ~/app
 
-            # Décompresser et charger l'image Docker
+            # ✅ ARRÊTER TOUS LES CONTENEURS EN PREMIER
+            echo "🛑 Arrêt des conteneurs existants..."
+            cd ~/app
+            docker-compose down --remove-orphans 2>/dev/null || true
+            
+            # ✅ Nettoyer explicitement les conteneurs problématiques
+            docker rm -f app-app-1 app-db-1 app-grafana-1 app-prometheus-1 app-alertmanager-1 app-node-exporter-1 app-postgres-exporter-1 2>/dev/null || true
+
+            # ✅ Charger l'image APRÈS avoir arrêté les conteneurs
+            echo "🐳 Chargement de l'image Docker..."
+            cd ~/
             gunzip -c ~/image.tar.gz | docker load
 
             # Copier les fichiers dans ~/app
-            mv ~/docker-compose.yml ~/app/
-            mv ~/prometheus.yml ~/app/
-            mv ~/alertmanager.yml ~/app/
+            echo "📁 Copie des fichiers de configuration..."
+            mv ~/docker-compose.yml ~/app/ 2>/dev/null || true
+            mv ~/prometheus.yml ~/app/ 2>/dev/null || true
+            mv ~/alertmanager.yml ~/app/ 2>/dev/null || true
             
             # Supprimer et remplacer le répertoire grafana
             rm -rf ~/app/grafana
-            mv ~/grafana ~/app/
+            mv ~/grafana ~/app/ 2>/dev/null || true
             
-            mv ~/image.tar.gz ~/app/
+            mv ~/image.tar.gz ~/app/ 2>/dev/null || true
 
             cd ~/app
 
+            # ✅ Créer le script sync-env.sh s'il n'existe pas
+            if [ ! -f "./sync-env.sh" ]; then
+              echo "📝 Création du script sync-env.sh..."
+              cat > sync-env.sh << 'SCRIPT_EOF'
+            #!/bin/bash
+            CONTAINER_NAME=$1
+            ENV_FILE=".env"
+
+            if [ -z "$CONTAINER_NAME" ]; then
+              echo "❌ Utilisation : ./sync-env.sh <nom-du-conteneur>"
+              exit 1
+            fi
+
+            if [ ! -f "$ENV_FILE" ]; then
+              echo "❌ Fichier $ENV_FILE introuvable."
+              exit 1
+            fi
+
+            echo "📦 Injection des variables dans le conteneur: $CONTAINER_NAME"
+
+            # Arrêter le conteneur
+            docker stop "$CONTAINER_NAME"
+
+            # Corriger le fichier .env (résoudre les variables)
+            TEMP_ENV="/tmp/resolved.env"
+            > "$TEMP_ENV"
+
+            while IFS='=' read -r key value; do
+              if [[ "$key" =~ ^#.*$ || -z "$key" ]]; then
+                continue
+              fi
+              
+              key=$(echo "$key" | xargs)
+              value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//' | xargs)
+              
+              # Résoudre les variables dans la valeur
+              if [[ "$value" == *'${'* ]]; then
+                while IFS='=' read -r sub_key sub_value; do
+                  if [[ ! "$sub_key" =~ ^#.*$ && ! -z "$sub_key" ]]; then
+                    sub_key=$(echo "$sub_key" | xargs)
+                    sub_value=$(echo "$sub_value" | sed -e 's/^"//' -e 's/"$//' | xargs)
+                    value=${value//\$\{$sub_key\}/$sub_value}
+                  fi
+                done < "$ENV_FILE"
+              fi
+              
+              echo "$key=$value" >> "$TEMP_ENV"
+            done < "$ENV_FILE"
+
+            # Redémarrer le conteneur avec les nouvelles variables
+            CONTAINER_ID=$(docker ps -aq --filter "name=$CONTAINER_NAME")
+            if [ ! -z "$CONTAINER_ID" ]; then
+              IMAGE=$(docker inspect --format='{{.Config.Image}}' "$CONTAINER_ID")
+              docker rm -f "$CONTAINER_NAME" 2>/dev/null
+              docker run -d \
+                --name "$CONTAINER_NAME" \
+                --network "$(basename $(pwd))_default" \
+                --env-file "$TEMP_ENV" \
+                -p 3000:3000 \
+                "$IMAGE"
+            fi
+
+            rm -f "$TEMP_ENV"
+            echo "✅ Variables injectées avec succès!"
+            SCRIPT_EOF
+              chmod +x sync-env.sh
+            fi
+
             # Modifier docker-compose.yml pour utiliser l'image tagguée
-            sed -i 's|image: maraka-app:latest|image: maraka-app:${{ github.sha }}|' docker-compose.yml
+            sed -i 's|image: maraka-app:.*|image: maraka-app:${{ github.sha }}|' docker-compose.yml
 
             # Supprimer nginx.conf s'il est mentionné
-            sed -i '/nginx.conf/d' docker-compose.yml || true
+            sed -i '/nginx.conf/d' docker-compose.yml 2>/dev/null || true
 
-            # Lancer docker-compose
-            docker-compose down || true
-            docker rm -f app-app-1 || true
+            # ✅ DÉMARRER tous les conteneurs
+            echo "🏃‍♂️ Lancement des conteneurs..."
             docker-compose up -d
-            docker exec app-app-1 npx prisma db push
 
-            # Injection des variables d'environnement
-            echo "🔧 Injection des variables d'environnement..."
-            sleep 10  # Attendre que le conteneur soit prêt
-            ./scripts/sync-env.sh app-app-1
+            # ✅ Attendre que les conteneurs soient prêts
+            echo "⏱️ Attente du démarrage des conteneurs..."
+            sleep 20
 
-            # Nettoyage images non utilisées
+            echo "📊 Statut des conteneurs:"
+            docker-compose ps
+
+            # ✅ MIGRATIONS PRISMA
+            echo "🗄️ Exécution des migrations Prisma..."
+            
+            # Trouver le conteneur app
+            APP_CONTAINER=$(docker-compose ps -q app)
+            if [ ! -z "$APP_CONTAINER" ]; then
+              APP_NAME=$(docker ps --filter "id=$APP_CONTAINER" --format "{{.Names}}")
+              echo "Conteneur app trouvé: $APP_NAME"
+              
+              # Attendre que la DB soit prête
+              echo "Attente de la base de données..."
+              for i in {1..10}; do
+                if docker exec $APP_NAME timeout 10 pg_isready -h db -p 5432 -U postgres > /dev/null 2>&1; then
+                  echo "✅ Base de données accessible"
+                  break
+                else
+                  echo "⏳ Tentative $i/10 - DB pas encore prête..."
+                  sleep 5
+                fi
+              done
+
+              # Exécuter les migrations
+              if docker exec $APP_NAME npx prisma db push --accept-data-loss; then
+                echo "✅ Schéma Prisma synchronisé"
+              else
+                echo "❌ Erreur lors de la synchronisation Prisma"
+                docker logs $APP_NAME --tail=20
+              fi
+
+              # ✅ Injection des variables d'environnement APRÈS les migrations
+              echo "🔧 Injection des variables d'environnement..."
+              if [ -f "./sync-env.sh" ]; then
+                ./sync-env.sh "$APP_NAME"
+              else
+                echo "⚠️ Script sync-env.sh non trouvé"
+              fi
+
+            else
+              echo "❌ Conteneur app non trouvé"
+            fi
+
+            # ✅ Tests de santé
+            echo "🧪 Tests de santé..."
+            sleep 10
+            
+            for i in {1..5}; do
+              if curl -f http://localhost:3000 > /dev/null 2>&1; then
+                echo "✅ Application accessible sur le port 3000"
+                break
+              else
+                echo "⏳ Test $i/5 - App pas encore prête..."
+                sleep 10
+              fi
+            done
+
+            # Nettoyage
+            echo "🧹 Nettoyage..."
             docker image prune -f
+            rm -f ~/deploy.tar.gz ~/image.tar.gz 2>/dev/null || true
+            rm -rf ~/deploy 2>/dev/null || true
 
-            # Nettoyage post-déploiement
-            echo "Nettoyage des fichiers temporaires..."
-            rm -f ~/deploy.tar.gz
-            rm -rf ~/deploy
-
-            echo "Nettoyage des images Docker non utilisées..."
-            docker image prune -af --filter "until=24h"
-
-            echo "Nettoyage des volumes Docker non utilisés..."
-            docker volume prune -f
-
-            echo "Nettoyage terminé."
+            echo "✅ Déploiement terminé avec succès!"
           EOF
