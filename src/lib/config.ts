@@ -5,20 +5,17 @@
  * Détermine l'URL de base de l'API selon l'environnement
  */
 export function getApiBaseUrl(): string {
-  // Utiliser NEXT_PUBLIC_API_URL si défini, sinon fallback sur localhost
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  
-  if (apiUrl) {
-    return apiUrl;
+  // En production, utiliser une URL relative pour éviter les problèmes CORS
+  if (typeof window !== 'undefined') {
+    // Côté client
+    if (process.env.NODE_ENV === 'production') {
+      return `${window.location.origin}/api`;
+    }
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
   }
   
-  // En production côté client, utiliser l'origine actuelle
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
-    return `${window.location.origin}/api`;
-  }
-  
-  // Fallback pour le développement
-  return 'http://localhost:3000/api';
+  // Côté serveur
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 }
 
 /**
