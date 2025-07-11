@@ -18,7 +18,8 @@ import {
   BarChart3,
   Calendar,
   Bell,
-  LogOut
+  LogOut,
+  House
 } from 'lucide-react';
 
 const navigation = [
@@ -86,7 +87,7 @@ export function DashboardNavigation({ mobileOnly = false }: DashboardNavigationP
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64">
-            <div className="flex items-center gap-2 mb-8">
+            <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <Wrench className="h-4 w-4 text-primary-foreground" />
               </div>
@@ -94,6 +95,18 @@ export function DashboardNavigation({ mobileOnly = false }: DashboardNavigationP
                 <h2 className="text-lg font-semibold">Daga Maraka</h2>
                 <p className="text-sm text-muted-foreground">Gestion BTP</p>
               </div>
+            </div>
+            
+            {/* Lien vers l'accueil */}
+            <div className="mb-6">
+              <Link 
+                href="/"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                <House className="h-4 w-4" />
+                <span className="text-sm">Retour à l&apos;accueil</span>
+              </Link>
             </div>
             
             <nav className="space-y-2">
@@ -114,7 +127,7 @@ export function DashboardNavigation({ mobileOnly = false }: DashboardNavigationP
         <div className="flex flex-col justify-between h-full p-6">
           {/* Top section with logo and navigation */}
           <div>
-            <div className="flex items-center gap-2 mb-8">
+            <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <Wrench className="h-4 w-4 text-primary-foreground" />
               </div>
@@ -122,6 +135,17 @@ export function DashboardNavigation({ mobileOnly = false }: DashboardNavigationP
                 <h2 className="text-lg font-semibold">Daga Maraka</h2>
                 <p className="text-sm text-muted-foreground">Gestion BTP</p>
               </div>
+            </div>
+            
+            {/* Lien vers l'accueil */}
+            <div className="mb-6">
+              <Link 
+                href="/"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <House className="h-4 w-4" />
+                <span className="text-sm">Retour à l&apos;accueil</span>
+              </Link>
             </div>
             
             <nav className="space-y-2">
@@ -177,7 +201,7 @@ export function DashboardNavigation({ mobileOnly = false }: DashboardNavigationP
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64">
-            <div className="flex items-center gap-2 mb-8">
+            <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <Wrench className="h-4 w-4 text-primary-foreground" />
               </div>
@@ -185,6 +209,18 @@ export function DashboardNavigation({ mobileOnly = false }: DashboardNavigationP
                 <h2 className="text-lg font-semibold">Daga Maraka</h2>
                 <p className="text-sm text-muted-foreground">Gestion BTP</p>
               </div>
+            </div>
+            
+            {/* Lien vers l'accueil */}
+            <div className="mb-6">
+              <Link 
+                href="/"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                <House className="h-4 w-4" />
+                <span className="text-sm">Retour à l&apos;accueil</span>
+              </Link>
             </div>
             
             <nav className="space-y-2">

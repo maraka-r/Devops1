@@ -12,15 +12,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { User, Settings, LogOut } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { User, Settings, LogOut, ChevronDown, House } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const router = useRouter();
   
   const handleLogout = async () => {
@@ -50,35 +50,38 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
               
               <div className="flex items-center gap-4">
-                {/* User Menu */}
+                {/* User Menu - Style interface publique */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>DM</AvatarFallback>
-                      </Avatar>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <User className="h-4 w-4" />
+                      {user?.name || 'Admin'}
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {user?.role === 'ADMIN' ? 'Admin' : 'Client'}
+                      </Badge>
+                      <ChevronDown className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end">
-                    <Link href="/dashboard/profile">
-                      <DropdownMenuItem>
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Profil</span>
-                      </DropdownMenuItem>
-                    </Link>
-                    <Link href="/dashboard/settings">
-                      <DropdownMenuItem>
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Paramètres</span>
-                      </DropdownMenuItem>
-                    </Link>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem asChild>
+                      <Link href="/" className="flex items-center">
+                        <House className="h-4 w-4 mr-2" />
+                        Accueil
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/profile" className="flex items-center">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Mon profil
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
-                      className="text-red-600"
                       onClick={handleLogout}
+                      className="text-red-600 hover:text-red-700 focus:text-red-700"
                     >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Déconnexion</span>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Déconnexion
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

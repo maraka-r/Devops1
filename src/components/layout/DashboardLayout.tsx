@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { UserMenu } from '@/components/ui/user-menu';
 import { 
   LayoutDashboard,
   Calendar,
@@ -138,7 +139,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Top bar */}
+        {/* Top bar desktop - visible uniquement sur desktop */}
+        <div className="hidden lg:block sticky top-0 z-40 bg-white border-b">
+          <div className="flex items-center justify-between h-16 px-6">
+            <span className="text-lg font-semibold">Dashboard Administrateur</span>
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" size="sm">
+                <Bell className="h-5 w-5" />
+              </Button>
+              <UserMenu />
+            </div>
+          </div>
+        </div>
+
+        {/* Top bar mobile */}
         <div className="sticky top-0 z-40 bg-white border-b lg:hidden">
           <div className="flex items-center justify-between h-16 px-4">
             <Button

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { UserMenu } from '@/components/ui/user-menu';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -283,8 +284,13 @@ export function ClientDashboardLayout({ children }: { children: React.ReactNode 
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
               </button>
 
-              {/* User info */}
-              <div className="hidden md:flex items-center gap-3">
+              {/* User Menu - Desktop */}
+              <div className="hidden md:block">
+                <UserMenu />
+              </div>
+
+              {/* User info mobile - fallback */}
+              <div className="md:hidden flex items-center gap-3">
                 <div className="text-right">
                   <div className="text-sm font-medium text-foreground">
                     {mockUser.name}
