@@ -3,21 +3,31 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { verifyToken } from '@/lib/jwt';
 
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ userId: string }> }
 ) {
   try {
-    // TODO: Implémenter l'authentification
-    const isAuthenticated = true; // Placeholder
-    const currentUserId = 'current-user-id'; // Placeholder
-    const isAdmin = true; // Placeholder
-    
-    if (!isAuthenticated) {
+    // Vérifier l'authentification
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({
         success: false,
-        error: 'Authentification requise'
+        error: 'Token d\'authentification manquant'
+      }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    let decoded;
+    
+    try {
+      decoded = verifyToken(token);
+    } catch {
+      return NextResponse.json({
+        success: false,
+        error: 'Token d\'authentification invalide'
       }, { status: 401 });
     }
 
@@ -32,7 +42,7 @@ export async function GET(
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
     // Vérifier les permissions
-    if (params.userId !== currentUserId && !isAdmin) {
+    if (params.userId !== decoded.id && decoded.role !== 'ADMIN') {
       return NextResponse.json({
         success: false,
         error: 'Accès non autorisé'

@@ -355,7 +355,7 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRet
       setIsLoading(true);
       setError(null);
       
-      const response = await apiService.get<Location[]>(`/locations/by-user/${userId}`);
+      const response = await apiService.get<Location[]>(`/locations/client/${userId}`);
       
       if (response.success && response.data) {
         setLocations(response.data);
