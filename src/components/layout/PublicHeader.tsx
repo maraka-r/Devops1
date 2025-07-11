@@ -212,12 +212,12 @@ export function PublicHeader() {
                 </Button>
                 
                 {/* CTA Devis */}
-                <Link href="/contact?type=devis">
+                {/* <Link href="/contact?type=devis">
                   <Button variant="outline" size="sm" className="gap-2">
                     <Mail className="h-4 w-4" />
                     Devis
                   </Button>
-                </Link>
+                </Link> */}
               </div>
             )}
           </div>
