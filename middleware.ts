@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
     return corsResponse;
   }
 
-  // Protection des routes basée sur les rôles
+  // Protection des routes pages basée sur les rôles
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/client')) {
     const token = request.cookies.get('token')?.value || 
                   request.headers.get('authorization')?.replace('Bearer ', '');
@@ -34,12 +34,12 @@ export function middleware(request: NextRequest) {
       // Protection /dashboard - seuls les ADMIN peuvent accéder
       if (pathname.startsWith('/dashboard')) {
         if (user.role !== 'ADMIN') {
-          console.warn(`🔒 Tentative d'accès non autorisée à ${pathname} par utilisateur ${user.email} (rôle: ${user.role})`);
-          // Si l'utilisateur est un client (USER), rediriger vers /client
+          console.warn(`🔒 ADMIN requis pour ${pathname} - Utilisateur ${user.email} (${user.role}) redirigé vers son espace`);
+          // Si l'utilisateur est un client (USER), rediriger vers son espace client
           if (user.role === 'USER') {
             return NextResponse.redirect(new URL('/client', request.url));
           }
-          // Pour les autres rôles, rediriger vers login
+          // Pour les autres rôles non reconnus, rediriger vers login
           return NextResponse.redirect(new URL('/auth/login', request.url));
         }
       }
@@ -47,12 +47,12 @@ export function middleware(request: NextRequest) {
       // Protection /client - seuls les USER (clients) peuvent accéder
       if (pathname.startsWith('/client')) {
         if (user.role !== 'USER') {
-          console.warn(`🔒 Tentative d'accès non autorisée à ${pathname} par utilisateur ${user.email} (rôle: ${user.role})`);
-          // Si l'utilisateur est un admin, rediriger vers /dashboard
+          console.warn(`🔒 USER requis pour ${pathname} - Utilisateur ${user.email} (${user.role}) redirigé vers son espace`);
+          // Si l'utilisateur est un admin, rediriger vers le dashboard
           if (user.role === 'ADMIN') {
             return NextResponse.redirect(new URL('/dashboard', request.url));
           }
-          // Pour les autres rôles, rediriger vers login
+          // Pour les autres rôles non reconnus, rediriger vers login
           return NextResponse.redirect(new URL('/auth/login', request.url));
         }
       }

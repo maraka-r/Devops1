@@ -22,6 +22,7 @@ interface AuthContextType {
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  redirectToUserSpace: () => void;
   
   // Utilitaires
   hasRole: (role: UserRole) => boolean;
@@ -145,7 +146,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Mettre à jour l'utilisateur
         setUser(userData);
         
-        // Pas de redirection automatique - laissons la page de login gérer cela
+        // Rediriger vers l'espace approprié selon le rôle
+        if (userData.role === 'ADMIN') {
+          router.push('/dashboard');
+        } else if (userData.role === 'USER') {
+          router.push('/client');
+        } else {
+          // Rôle non reconnu, rester sur la page de login
+          console.warn('Rôle utilisateur non reconnu:', userData.role);
+        }
       } else {
         throw new ApiError(response.error || 'Erreur de connexion', 400);
       }
@@ -175,8 +184,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Mettre à jour l'utilisateur
         setUser(userData);
         
-        // Rediriger vers le dashboard
-        router.push('/dashboard');
+        // Rediriger vers l'espace approprié selon le rôle
+        if (userData.role === 'ADMIN') {
+          router.push('/dashboard');
+        } else if (userData.role === 'USER') {
+          router.push('/client');
+        } else {
+          // Par défaut, rediriger vers client pour les nouveaux utilisateurs
+          router.push('/');
+        }
       } else {
         throw new ApiError(response.error || 'Erreur d\'inscription', 400);
       }
@@ -205,6 +221,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Rediriger vers la page de login
       router.push('/auth/login');
+    }
+  };
+
+  // Fonction pour rediriger vers l'espace utilisateur approprié
+  const redirectToUserSpace = (): void => {
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
+
+    switch (user.role) {
+      case 'ADMIN':
+        router.push('/dashboard');
+        break;
+      case 'USER':
+        router.push('/client');
+        break;
+      default:
+        // Rôle non reconnu, rediriger vers login
+        router.push('/auth/login');
+        break;
     }
   };
 
@@ -275,6 +312,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     register,
     logout,
     refreshUser,
+    redirectToUserSpace,
     
     // Utilitaires
     hasRole,

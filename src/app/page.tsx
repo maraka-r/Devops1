@@ -183,8 +183,8 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       
-      {/* Redirection automatique selon le rôle utilisateur */}
-      <RoleBasedRedirect />
+      {/* Redirection automatique selon le rôle utilisateur */}        {/* Redirection automatique désactivée sur la page d'accueil */}
+        <RoleBasedRedirect enableRedirect={false} />
       
       <MainLayout>
         {/* Section Hero - Always Above the Fold */}

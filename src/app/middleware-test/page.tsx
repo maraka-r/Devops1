@@ -13,6 +13,23 @@ export default function MiddlewareTestPage() {
     setTestResults(prev => [...prev, `${new Date().toLocaleTimeString()}: ${result}`]);
   };
 
+  const testRedirectionLogic = () => {
+    if (!user) {
+      addTestResult('❌ Aucun utilisateur connecté pour tester les redirections');
+      return;
+    }
+
+    addTestResult(`👤 Utilisateur connecté: ${user.email} (${user.role})`);
+    
+    if (user.role === 'ADMIN') {
+      addTestResult('🧪 Test ADMIN: tentative d\'accès à l\'espace client (doit rediriger vers dashboard)');
+      router.push('/client');
+    } else if (user.role === 'USER') {
+      addTestResult('🧪 Test USER: tentative d\'accès au dashboard (doit rediriger vers client)');
+      router.push('/dashboard');
+    }
+  };
+
   const testDashboardAccess = () => {
     addTestResult('🧪 Test accès /dashboard...');
     router.push('/dashboard');
@@ -118,6 +135,13 @@ export default function MiddlewareTestPage() {
                   className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
                 >
                   Accéder à /client
+                </button>
+                <button
+                  onClick={testRedirectionLogic}
+                  className="w-full px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                  disabled={!user}
+                >
+                  🔄 Tester Redirection Auto
                 </button>
               </div>
             </div>
