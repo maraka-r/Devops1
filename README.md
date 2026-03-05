@@ -357,3 +357,5 @@ Pour la configuration de production, assurez-vous de :
 3. **SSL/TLS** : Configurez SSL/TLS pour sécuriser les communications entre le client et le serveur.
 4. **Sauvegardes** : Effectuez des sauvegardes régulières de votre base de données et de votre application.
 
+#   T E S T  
+ 
